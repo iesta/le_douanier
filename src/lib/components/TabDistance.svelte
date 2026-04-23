@@ -72,8 +72,8 @@
 
       <div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
         <p class="text-xs text-green-600 dark:text-green-400 uppercase">Trail Distance</p>
-        <p class="text-3xl font-bold text-green-700 dark:text-green-300">{$distanceInfo.trailDistance.toFixed(0)} m</p>
-        <p class="text-sm text-green-600 dark:text-green-400">({($distanceInfo.trailDistance / 1000).toFixed(2)} km)</p>
+        <p class="text-3xl font-bold text-green-700 dark:text-green-300">{($distanceInfo.trailDistance / 1000).toFixed(2)} km</p>
+        <p class="text-sm text-green-600 dark:text-green-400">({$distanceInfo.trailDistance.toFixed(0)} m)</p>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
