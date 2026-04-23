@@ -1,6 +1,6 @@
 # Le Douanier
 
-![Le Douanier App Screenshot](/screenshot.png)
+![Le Douanier App Screenshot](static/screenshot.png)
 
 ## English
 
