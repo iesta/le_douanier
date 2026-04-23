@@ -15,19 +15,29 @@
   let highlightLayer = null;
   let markersLayer = null;
   let connectionLines = null;
-  let initialized = false;
 
   onMount(async () => {
-    L = await import('leaflet');
-    await import('leaflet/dist/leaflet.css');
+    const leaflet = await import('leaflet');
+    L = leaflet.default || leaflet;
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+    link.crossOrigin = '';
+    document.head.appendChild(link);
+
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     map = L.map(mapContainer, {
       center: [48.6, -1.5],
-      zoom: 9
+      zoom: 9,
+      height: '100%'
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18
     }).addTo(map);
 
     trailLayer = L.layerGroup().addTo(map);
@@ -35,11 +45,15 @@
     markersLayer = L.layerGroup().addTo(map);
     connectionLines = L.layerGroup().addTo(map);
 
-    initialized = true;
-
     if ($trackPoints.length > 0) {
       plotTrail();
     }
+
+    return () => {
+      if (map) {
+        map.remove();
+      }
+    };
   });
 
   function plotTrail() {
@@ -134,18 +148,26 @@
   }
 
   $effect(() => {
-    if (initialized && $trackPoints.length > 0) {
+    if (map && $trackPoints.length > 0) {
       plotTrail();
     }
   });
 
   $effect(() => {
-    if (initialized && ($originPoint || $destinationPoint)) {
+    if (map && ($originPoint || $destinationPoint)) {
       updateMarkers();
     }
   });
 </script>
 
 <div class="h-full flex flex-col">
-  <div bind:this={mapContainer} class="flex-1 min-h-[500px]"></div>
+  <div bind:this={mapContainer} class="flex-1 w-full h-screen max-h-[calc(100vh-120px)]"></div>
 </div>
+
+<style>
+  :global(.leaflet-container) {
+    height: 100%;
+    width: 100%;
+    font-family: inherit;
+  }
+</style>
