@@ -10,18 +10,22 @@
 
   let mapContainer;
   let map = null;
+  let L = null;
   let trailLayer = null;
   let highlightLayer = null;
   let markersLayer = null;
   let connectionLines = null;
+  let initialized = false;
 
   onMount(async () => {
-    const L = await import('leaflet');
+    L = await import('leaflet');
     await import('leaflet/dist/leaflet.css');
 
-    if (map) return;
+    map = L.map(mapContainer, {
+      center: [48.6, -1.5],
+      zoom: 9
+    });
 
-    map = L.map(mapContainer).setView([48.6, -1.5], 9);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -31,101 +35,112 @@
     markersLayer = L.layerGroup().addTo(map);
     connectionLines = L.layerGroup().addTo(map);
 
+    initialized = true;
+
     if ($trackPoints.length > 0) {
       plotTrail();
     }
   });
 
   function plotTrail() {
-    if (!map || $trackPoints.length === 0) return;
+    if (!map || !L || $trackPoints.length === 0) return;
 
-    import('leaflet').then(L => {
-      trailLayer.clearLayers();
-      highlightLayer.clearLayers();
+    trailLayer.clearLayers();
+    highlightLayer.clearLayers();
 
-      const coords = $trackPoints.map(p => [p.lat, p.lon]);
-      const polyline = L.polyline(coords, {
-        color: '#3388ff',
-        weight: 3,
-        opacity: 0.7
-      });
-      trailLayer.addLayer(polyline);
-
-      map.fitBounds(polyline.getBounds());
+    const coords = $trackPoints.map(p => [p.lat, p.lon]);
+    const polyline = L.polyline(coords, {
+      color: '#3388ff',
+      weight: 3,
+      opacity: 0.7
     });
+    trailLayer.addLayer(polyline);
+
+    map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
   }
 
   function updateMarkers() {
-    if (!map) return;
+    if (!map || !L) return;
 
-    import('leaflet').then(L => {
-      markersLayer.clearLayers();
-      connectionLines.clearLayers();
-      highlightLayer.clearLayers();
+    markersLayer.clearLayers();
+    connectionLines.clearLayers();
+    highlightLayer.clearLayers();
 
-      const redIcon = L.divIcon({ className: 'bg-red-500 w-4 h-4 rounded-full border-2 border-white', html: '<div class="w-full h-full bg-red-500 rounded-full"></div>' });
-      const greenIcon = L.divIcon({ className: 'bg-green-500 w-4 h-4 rounded-full border-2 border-white', html: '<div class="w-full h-full bg-green-500 rounded-full"></div>' });
-      const blueIcon = L.divIcon({ className: 'bg-blue-500 w-4 h-4 rounded-full border-2 border-white', html: '<div class="w-full h-full bg-blue-500 rounded-full"></div>' });
-
-      if ($originPoint) {
-        const origMarker = L.marker([$originPoint.lat, $originPoint.lon], { icon: redIcon })
-          .bindPopup('Origin');
-        markersLayer.addLayer(origMarker);
-
-        if ($originNearestTrackPoint) {
-          const origLine = L.polyline(
-            [[$originPoint.lat, $originPoint.lon], [$originNearestTrackPoint.lat, $originNearestTrackPoint.lon]],
-            { color: '#ef4444', weight: 2, dashArray: '5, 5' }
-          );
-          connectionLines.addLayer(origLine);
-
-          const origTrackMarker = L.marker([$originNearestTrackPoint.lat, $originNearestTrackPoint.lon], { icon: blueIcon })
-            .bindPopup('Origin Track Point');
-          markersLayer.addLayer(origTrackMarker);
-        }
-      }
-
-      if ($destinationPoint) {
-        const destMarker = L.marker([$destinationPoint.lat, $destinationPoint.lon], { icon: greenIcon })
-          .bindPopup('Destination');
-        markersLayer.addLayer(destMarker);
-
-        if ($destinationNearestTrackPoint) {
-          const destLine = L.polyline(
-            [[$destinationPoint.lat, $destinationPoint.lon], [$destinationNearestTrackPoint.lat, $destinationNearestTrackPoint.lon]],
-            { color: '#22c55e', weight: 2, dashArray: '5, 5' }
-          );
-          connectionLines.addLayer(destLine);
-
-          const destTrackMarker = L.marker([$destinationNearestTrackPoint.lat, $destinationNearestTrackPoint.lon], { icon: blueIcon })
-            .bindPopup('Destination Track Point');
-          markersLayer.addLayer(destTrackMarker);
-        }
-      }
-
-      if ($originNearestTrackPoint && $destinationNearestTrackPoint) {
-        const startIdx = Math.min($originNearestTrackPoint.index, $destinationNearestTrackPoint.index);
-        const endIdx = Math.max($originNearestTrackPoint.index, $destinationNearestTrackPoint.index);
-
-        const segmentCoords = $trackPoints.slice(startIdx, endIdx + 1).map(p => [p.lat, p.lon]);
-        const segment = L.polyline(segmentCoords, {
-          color: '#f59e0b',
-          weight: 6,
-          opacity: 1
-        });
-        highlightLayer.addLayer(segment);
-      }
+    const redIcon = L.divIcon({
+      className: 'custom-marker',
+      html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
     });
+
+    const greenIcon = L.divIcon({
+      className: 'custom-marker',
+      html: '<div style="width:16px;height:16px;background:#22c55e;border:3px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    });
+
+    const blueIcon = L.divIcon({
+      className: 'custom-marker',
+      html: '<div style="width:12px;height:12px;background:#3b82f6;border:2px solid white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>',
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
+    });
+
+    if ($originPoint && $originNearestTrackPoint) {
+      const origMarker = L.marker([$originPoint.lat, $originPoint.lon], { icon: redIcon })
+        .bindPopup('<b>Origin</b><br>' + ($originPoint.name || 'Custom'));
+      markersLayer.addLayer(origMarker);
+
+      const origLine = L.polyline(
+        [[$originPoint.lat, $originPoint.lon], [$originNearestTrackPoint.lat, $originNearestTrackPoint.lon]],
+        { color: '#ef4444', weight: 2, dashArray: '5, 5', opacity: 0.8 }
+      );
+      connectionLines.addLayer(origLine);
+
+      const origTrackMarker = L.marker([$originNearestTrackPoint.lat, $originNearestTrackPoint.lon], { icon: blueIcon })
+        .bindPopup('<b>A</b> (Point #' + $originNearestTrackPoint.index + ')');
+      markersLayer.addLayer(origTrackMarker);
+    }
+
+    if ($destinationPoint && $destinationNearestTrackPoint) {
+      const destMarker = L.marker([$destinationPoint.lat, $destinationPoint.lon], { icon: greenIcon })
+        .bindPopup('<b>Destination</b><br>' + ($destinationPoint.name || 'Custom'));
+      markersLayer.addLayer(destMarker);
+
+      const destLine = L.polyline(
+        [[$destinationPoint.lat, $destinationPoint.lon], [$destinationNearestTrackPoint.lat, $destinationNearestTrackPoint.lon]],
+        { color: '#22c55e', weight: 2, dashArray: '5, 5', opacity: 0.8 }
+      );
+      connectionLines.addLayer(destLine);
+
+      const destTrackMarker = L.marker([$destinationNearestTrackPoint.lat, $destinationNearestTrackPoint.lon], { icon: blueIcon })
+        .bindPopup('<b>B</b> (Point #' + $destinationNearestTrackPoint.index + ')');
+      markersLayer.addLayer(destTrackMarker);
+    }
+
+    if ($originNearestTrackPoint && $destinationNearestTrackPoint) {
+      const startIdx = Math.min($originNearestTrackPoint.index, $destinationNearestTrackPoint.index);
+      const endIdx = Math.max($originNearestTrackPoint.index, $destinationNearestTrackPoint.index);
+
+      const segmentCoords = $trackPoints.slice(startIdx, endIdx + 1).map(p => [p.lat, p.lon]);
+      const segment = L.polyline(segmentCoords, {
+        color: '#f59e0b',
+        weight: 5,
+        opacity: 1
+      });
+      highlightLayer.addLayer(segment);
+    }
   }
 
   $effect(() => {
-    if ($trackPoints.length > 0 && map) {
+    if (initialized && $trackPoints.length > 0) {
       plotTrail();
     }
   });
 
   $effect(() => {
-    if ($originPoint || $destinationPoint) {
+    if (initialized && ($originPoint || $destinationPoint)) {
       updateMarkers();
     }
   });

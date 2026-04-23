@@ -1,3 +1,4 @@
+const PHOTON_URL = 'https://photon.komoot.io/api';
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
@@ -29,7 +30,35 @@ export function calculateBounds(points, paddingKm = 100) {
 export async function searchPlace(query, limit = 10, bounds = null) {
   if (!query || query.length < 2) return [];
 
-  const params = new URLSearchParams({
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      limit,
+      lang: 'fr'
+    });
+
+    if (bounds) {
+      params.set('bbox', `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
+    }
+
+    const res = await fetch(`${PHOTON_URL}?${params}`, {
+      headers: { 'User-Agent': 'LeDouanier-App/1.0' }
+    });
+
+    if (!res.ok) throw new Error('Photon failed');
+
+    const data = await res.json();
+    return (data.features || []).map(f => ({
+      lat: f.geometry.coordinates[1],
+      lon: f.geometry.coordinates[0],
+      display_name: f.properties.name + (f.properties.state ? `, ${f.properties.state}` : ''),
+      type: f.properties.type
+    }));
+  } catch (e) {
+    console.warn('Photon failed, falling back to Nominatim:', e);
+  }
+
+  const nominatimParams = new URLSearchParams({
     q: query,
     format: 'json',
     limit,
@@ -37,11 +66,11 @@ export async function searchPlace(query, limit = 10, bounds = null) {
   });
 
   if (bounds) {
-    params.set('viewbox', `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
-    params.set('bounded', '1');
+    nominatimParams.set('viewbox', `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`);
+    nominatimParams.set('bounded', '1');
   }
 
-  const res = await fetch(`${NOMINATIM_URL}?${params}`, {
+  const res = await fetch(`${NOMINATIM_URL}?${nominatimParams}`, {
     headers: { 'User-Agent': 'LeDouanier-App/1.0' }
   });
 

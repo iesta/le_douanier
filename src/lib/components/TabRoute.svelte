@@ -1,5 +1,5 @@
 <script>
-  import { originPoint, destinationPoint, trackBounds } from '$lib/stores/index.js';
+  import { originPoint, destinationPoint, trackBounds, history, clearHistory } from '$lib/stores/index.js';
   import { searchPlace, searchPOI } from '$lib/utils/geocode.js';
 
   let originQuery = $state('');
@@ -17,6 +17,8 @@
   let destShowCoords = $state(false);
   let destLat = $state('');
   let destLon = $state('');
+
+  let showHistory = $state(false);
 
   let originDebounce;
   let destDebounce;
@@ -158,10 +160,54 @@
     destResults = [];
     destPOIResults = [];
   }
+
+  function selectFromHistory(item) {
+    originPoint.set(item.origin);
+    destinationPoint.set(item.destination);
+    showHistory = false;
+  }
+
+  function formatDistance(meters) {
+    return (meters / 1000).toFixed(2) + ' km';
+  }
 </script>
 
 <div class="p-4 pb-20 space-y-6">
-  <h2 class="text-xl font-bold text-gray-900 dark:text-white">Route</h2>
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Route</h2>
+    {#if $history.length > 0}
+      <button
+        onclick={() => showHistory = !showHistory}
+        class="text-xs text-blue-600 dark:text-blue-400 underline"
+      >
+        History ({$history.length})
+      </button>
+    {/if}
+  </div>
+
+  {#if showHistory && $history.length > 0}
+    <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent Routes</h3>
+        <button onclick={() => clearHistory()} class="text-xs text-red-600 underline">Clear all</button>
+      </div>
+      <ul class="max-h-48 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
+        {#each $history as item}
+          <li>
+            <button
+              onclick={() => selectFromHistory(item)}
+              class="w-full text-left p-2 hover:bg-gray-200 dark:hover:bg-gray-700 text-xs"
+            >
+              <p class="font-medium text-gray-800 dark:text-gray-200 truncate">
+                {item.origin.name || 'Origin'} → {item.destination.name || 'Destination'}
+              </p>
+              <p class="text-gray-500">{formatDistance(item.distance)}</p>
+            </button>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
 
   <div class="space-y-4">
     <div class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -267,7 +313,7 @@
                 onclick={() => selectDestPlace(place)}
                 class="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-xs border-b border-gray-100 dark:border-gray-700 last:border-0"
               >
-                {place.display_name.split(',').slice(0, 3).join(',')}
+                {destResults.display_name?.split(',').slice(0, 3).join(',') || place.display_name.split(',').slice(0, 3).join(',')}
               </button>
             </li>
           {/each}

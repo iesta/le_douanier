@@ -4,7 +4,8 @@
     destinationPoint,
     originNearestTrackPoint,
     destinationNearestTrackPoint,
-    trackPoints
+    trackPoints,
+    addToHistory
   } from '$lib/stores/index.js';
   import {
     calculateTrailDistance,
@@ -12,6 +13,8 @@
     estimateHikingTime
   } from '$lib/utils/geo.js';
   import { derived } from 'svelte/store';
+
+  let lastSavedId = null;
 
   const distanceInfo = derived(
     [originNearestTrackPoint, destinationNearestTrackPoint, trackPoints],
@@ -39,6 +42,16 @@
       };
     }
   );
+
+  $effect(() => {
+    if ($distanceInfo && $originPoint && $destinationPoint) {
+      const id = `${$originPoint.lat}-${$originPoint.lon}-${$destinationPoint.lat}-${$destinationPoint.lon}`;
+      if (id !== lastSavedId) {
+        lastSavedId = id;
+        addToHistory($originPoint, $destinationPoint, $distanceInfo.trailDistance);
+      }
+    }
+  });
 </script>
 
 <div class="p-4 pb-20">
