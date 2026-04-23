@@ -15,6 +15,7 @@
   let highlightLayer = null;
   let markersLayer = null;
   let connectionLines = null;
+  let mapReady = false;
 
   onMount(async () => {
     const leaflet = await import('leaflet');
@@ -23,20 +24,18 @@
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
-    link.crossOrigin = '';
     document.head.appendChild(link);
 
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     map = L.map(mapContainer, {
       center: [48.6, -1.5],
       zoom: 9,
-      height: '100%'
+      zoomControl: true
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; OpenStreetMap',
       maxZoom: 18
     }).addTo(map);
 
@@ -45,14 +44,14 @@
     markersLayer = L.layerGroup().addTo(map);
     connectionLines = L.layerGroup().addTo(map);
 
+    mapReady = true;
+
     if ($trackPoints.length > 0) {
       plotTrail();
     }
 
     return () => {
-      if (map) {
-        map.remove();
-      }
+      if (map) map.remove();
     };
   });
 
@@ -60,17 +59,16 @@
     if (!map || !L || $trackPoints.length === 0) return;
 
     trailLayer.clearLayers();
-    highlightLayer.clearLayers();
 
     const coords = $trackPoints.map(p => [p.lat, p.lon]);
     const polyline = L.polyline(coords, {
       color: '#3388ff',
       weight: 3,
-      opacity: 0.7
+      opacity: 0.8
     });
     trailLayer.addLayer(polyline);
 
-    map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+    map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
   }
 
   function updateMarkers() {
@@ -80,94 +78,74 @@
     connectionLines.clearLayers();
     highlightLayer.clearLayers();
 
-    const redIcon = L.divIcon({
-      className: 'custom-marker',
-      html: '<div style="width:16px;height:16px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
+    const icon = (color, size = 16) => L.divIcon({
+      html: `<div style="width:${size}px;height:${size}px;background:${color};border:2px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>`,
+      className: 'marker-icon',
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2]
     });
 
-    const greenIcon = L.divIcon({
-      className: 'custom-marker',
-      html: '<div style="width:16px;height:16px;background:#22c55e;border:3px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
-    });
-
-    const blueIcon = L.divIcon({
-      className: 'custom-marker',
-      html: '<div style="width:12px;height:12px;background:#3b82f6;border:2px solid white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>',
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
-    });
+    const redIcon = icon('#ef4444', 18);
+    const greenIcon = icon('#22c55e', 18);
+    const blueIcon = icon('#3b82f6', 12);
 
     if ($originPoint && $originNearestTrackPoint) {
-      const origMarker = L.marker([$originPoint.lat, $originPoint.lon], { icon: redIcon })
-        .bindPopup('<b>Origin</b><br>' + ($originPoint.name || 'Custom'));
-      markersLayer.addLayer(origMarker);
+      markersLayer.addLayer(L.marker([$originPoint.lat, $originPoint.lon], { icon: redIcon, zIndexOffset: 1000 })
+        .bindPopup(`<b style="color:#ef4444">Origin</b><br>${$originPoint.name || 'Custom'}`));
 
-      const origLine = L.polyline(
+      connectionLines.addLayer(L.polyline(
         [[$originPoint.lat, $originPoint.lon], [$originNearestTrackPoint.lat, $originNearestTrackPoint.lon]],
-        { color: '#ef4444', weight: 2, dashArray: '5, 5', opacity: 0.8 }
-      );
-      connectionLines.addLayer(origLine);
+        { color: '#ef4444', weight: 2, dashArray: '5,5' }
+      ));
 
-      const origTrackMarker = L.marker([$originNearestTrackPoint.lat, $originNearestTrackPoint.lon], { icon: blueIcon })
-        .bindPopup('<b>A</b> (Point #' + $originNearestTrackPoint.index + ')');
-      markersLayer.addLayer(origTrackMarker);
+      markersLayer.addLayer(L.marker([$originNearestTrackPoint.lat, $originNearestTrackPoint.lon], { icon: blueIcon })
+        .bindPopup(`<b style="color:#3b82f6">A</b> #${$originNearestTrackPoint.index}`));
     }
 
     if ($destinationPoint && $destinationNearestTrackPoint) {
-      const destMarker = L.marker([$destinationPoint.lat, $destinationPoint.lon], { icon: greenIcon })
-        .bindPopup('<b>Destination</b><br>' + ($destinationPoint.name || 'Custom'));
-      markersLayer.addLayer(destMarker);
+      markersLayer.addLayer(L.marker([$destinationPoint.lat, $destinationPoint.lon], { icon: greenIcon, zIndexOffset: 1000 })
+        .bindPopup(`<b style="color:#22c55e">Destination</b><br>${$destinationPoint.name || 'Custom'}`));
 
-      const destLine = L.polyline(
+      connectionLines.addLayer(L.polyline(
         [[$destinationPoint.lat, $destinationPoint.lon], [$destinationNearestTrackPoint.lat, $destinationNearestTrackPoint.lon]],
-        { color: '#22c55e', weight: 2, dashArray: '5, 5', opacity: 0.8 }
-      );
-      connectionLines.addLayer(destLine);
+        { color: '#22c55e', weight: 2, dashArray: '5,5' }
+      ));
 
-      const destTrackMarker = L.marker([$destinationNearestTrackPoint.lat, $destinationNearestTrackPoint.lon], { icon: blueIcon })
-        .bindPopup('<b>B</b> (Point #' + $destinationNearestTrackPoint.index + ')');
-      markersLayer.addLayer(destTrackMarker);
+      markersLayer.addLayer(L.marker([$destinationNearestTrackPoint.lat, $destinationNearestTrackPoint.lon], { icon: blueIcon })
+        .bindPopup(`<b style="color:#3b82f6">B</b> #${$destinationNearestTrackPoint.index}`));
     }
 
     if ($originNearestTrackPoint && $destinationNearestTrackPoint) {
       const startIdx = Math.min($originNearestTrackPoint.index, $destinationNearestTrackPoint.index);
       const endIdx = Math.max($originNearestTrackPoint.index, $destinationNearestTrackPoint.index);
-
       const segmentCoords = $trackPoints.slice(startIdx, endIdx + 1).map(p => [p.lat, p.lon]);
-      const segment = L.polyline(segmentCoords, {
+
+      highlightLayer.addLayer(L.polyline(segmentCoords, {
         color: '#f59e0b',
-        weight: 5,
+        weight: 6,
         opacity: 1
-      });
-      highlightLayer.addLayer(segment);
+      }));
     }
   }
 
   $effect(() => {
-    if (map && $trackPoints.length > 0) {
-      plotTrail();
-    }
+    if (mapReady && $trackPoints.length > 0) plotTrail();
   });
 
   $effect(() => {
-    if (map && ($originPoint || $destinationPoint)) {
-      updateMarkers();
-    }
+    if (mapReady) updateMarkers();
   });
 </script>
 
-<div class="h-full flex flex-col">
-  <div bind:this={mapContainer} class="flex-1 w-full h-screen max-h-[calc(100vh-120px)]"></div>
-</div>
+<div bind:this={mapContainer} class="w-full h-full"></div>
 
 <style>
-  :global(.leaflet-container) {
-    height: 100%;
-    width: 100%;
+  :global(.marker-icon) {
+    background: transparent !important;
+    border: none !important;
+  }
+  :global(.leaflet-popup-content-wrapper) {
+    border-radius: 8px;
     font-family: inherit;
   }
 </style>
