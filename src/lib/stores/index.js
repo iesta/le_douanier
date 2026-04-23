@@ -1,7 +1,12 @@
 import { writable, derived } from 'svelte/store';
-import { haversine, findNearestTrackPointIndex } from '$lib/utils/geo.js';
+import { findNearestTrackPointIndex } from '$lib/utils/geo.js';
+import { calculateBounds } from '$lib/utils/geocode.js';
 
 export const trackPoints = writable([]);
+
+export const trackBounds = derived(trackPoints, ($trackPoints) => {
+  return calculateBounds($trackPoints, 100);
+});
 
 export const originPoint = writable(null);
 export const destinationPoint = writable(null);

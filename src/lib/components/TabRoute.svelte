@@ -1,5 +1,5 @@
 <script>
-  import { originPoint, destinationPoint } from '$lib/stores/index.js';
+  import { originPoint, destinationPoint, trackBounds } from '$lib/stores/index.js';
   import { searchPlace, searchPOI } from '$lib/utils/geocode.js';
 
   let originQuery = $state('');
@@ -27,7 +27,7 @@
       if (originQuery.length >= 2) {
         originLoading = true;
         try {
-          originResults = await searchPlace(originQuery);
+          originResults = await searchPlace(originQuery, 10, $trackBounds);
         } catch (e) {
           originResults = [];
         } finally {
@@ -45,7 +45,7 @@
       if (destQuery.length >= 2) {
         destLoading = true;
         try {
-          destResults = await searchPlace(destQuery);
+          destResults = await searchPlace(destQuery, 10, $trackBounds);
         } catch (e) {
           destResults = [];
         } finally {
