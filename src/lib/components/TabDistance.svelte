@@ -46,10 +46,19 @@
 
   {#if !$originPoint || !$destinationPoint}
     <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-      <p class="text-yellow-800 dark:text-yellow-200">Set origin and destination in tabs 1 and 2 first.</p>
+      <p class="text-yellow-800 dark:text-yellow-200">Set origin and destination in the Route tab first.</p>
     </div>
   {:else if $distanceInfo}
     <div class="space-y-4">
+      <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs">
+        <p class="text-gray-600 dark:text-gray-400">
+          <span class="font-medium">From:</span> {$originPoint?.name || 'Origin'} (point #{$originNearestTrackPoint?.index})
+        </p>
+        <p class="text-gray-600 dark:text-gray-400">
+          <span class="font-medium">To:</span> {$destinationPoint?.name || 'Destination'} (point #{$destinationNearestTrackPoint?.index})
+        </p>
+      </div>
+
       <div class="grid grid-cols-2 gap-3">
         <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <p class="text-xs text-blue-600 dark:text-blue-400 uppercase">Origin → Path</p>

@@ -3,8 +3,7 @@
   import { selectedTab, trackPoints } from '$lib/stores/index.js';
   import { parseGPX } from '$lib/utils/geo.js';
   import TabBar from '$lib/components/TabBar.svelte';
-  import TabOrigin from '$lib/components/TabOrigin.svelte';
-  import TabDestination from '$lib/components/TabDestination.svelte';
+  import TabRoute from '$lib/components/TabRoute.svelte';
   import TabDistance from '$lib/components/TabDistance.svelte';
   import TabMap from '$lib/components/TabMap.svelte';
   import TabPreferences from '$lib/components/TabPreferences.svelte';
@@ -12,7 +11,7 @@
   let loading = $state(true);
   let error = $state(null);
 
-  const tabs = [TabOrigin, TabDestination, TabDistance, TabMap, TabPreferences];
+  const tabs = [TabRoute, TabDistance, TabMap, TabPreferences];
 
   onMount(async () => {
     try {
@@ -31,14 +30,14 @@
 
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
   <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-    <h1 class="text-lg font-bold text-gray-900 dark:text-white">GR34 Distance Calculator</h1>
+    <h1 class="text-lg font-bold text-gray-900 dark:text-white">Le Douanier</h1>
     <p class="text-xs text-gray-500 dark:text-gray-400">
       {#if loading}
         Loading track...
       {:else if error}
         Error: {error}
       {:else}
-        {$trackPoints.length} track points loaded
+        GR34 Sentier des Douaniers · {$trackPoints.length} track points
       {/if}
     </p>
   </header>
@@ -57,7 +56,7 @@
     {:else}
       {#each tabs as TabComponent, i}
         {#if $selectedTab === i}
-          <svelte:component this={TabComponent} />
+          <TabComponent />
         {/if}
       {/each}
     {/if}
