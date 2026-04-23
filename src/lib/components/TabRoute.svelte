@@ -1,5 +1,5 @@
 <script>
-  import { originPoint, destinationPoint, trackBounds, history, clearHistory } from '$lib/stores/index.js';
+  import { originPoint, destinationPoint, trackBounds, history, clearHistory, recentOrigins, recentDestinations, addToRecentOrigins, addToRecentDestinations } from '$lib/stores/index.js';
   import { searchPlace, searchPOI } from '$lib/utils/geocode.js';
 
   let originQuery = $state('');
@@ -9,6 +9,7 @@
   let originShowCoords = $state(false);
   let originLat = $state('');
   let originLon = $state('');
+  let originShowRecent = $state(false);
 
   let destQuery = $state('');
   let destResults = $state([]);
@@ -17,20 +18,19 @@
   let destShowCoords = $state(false);
   let destLat = $state('');
   let destLon = $state('');
+  let destShowRecent = $state(false);
 
   let showHistory = $state(false);
-  let originSelectedPOI = $state(null);
-  let destSelectedPOI = $state(null);
 
   let originDebounce;
   let destDebounce;
 
   async function handleOriginInput() {
+    originShowRecent = false;
     clearTimeout(originDebounce);
     originDebounce = setTimeout(async () => {
       if (originQuery.length >= 2) {
         originLoading = true;
-        originSelectedPOI = null;
         try {
           originResults = await searchPlace(originQuery, 10, $trackBounds);
         } catch (e) {
@@ -38,6 +38,8 @@
         } finally {
           originLoading = false;
         }
+      } else if (originQuery.length === 0 && originShowRecent) {
+        // show recent
       } else {
         originResults = [];
       }
@@ -45,11 +47,11 @@
   }
 
   async function handleDestInput() {
+    destShowRecent = false;
     clearTimeout(destDebounce);
     destDebounce = setTimeout(async () => {
       if (destQuery.length >= 2) {
         destLoading = true;
-        destSelectedPOI = null;
         try {
           destResults = await searchPlace(destQuery, 10, $trackBounds);
         } catch (e) {
@@ -65,7 +67,6 @@
 
   async function loadOriginPOIs(lat, lon) {
     originLoading = true;
-    originSelectedPOI = null;
     try {
       originPOIResults = await searchPOI(lat, lon, 50000);
       originPOIResults = originPOIResults.slice(0, 15);
@@ -78,7 +79,6 @@
 
   async function loadDestPOIs(lat, lon) {
     destLoading = true;
-    destSelectedPOI = null;
     try {
       destPOIResults = await searchPOI(lat, lon, 50000);
       destPOIResults = destPOIResults.slice(0, 15);
@@ -90,39 +90,61 @@
   }
 
   function selectOriginPlace(place) {
-    originPoint.set({
+    const pt = {
       lat: parseFloat(place.lat),
       lon: parseFloat(place.lon),
       name: place.display_name.split(',').slice(0, 3).join(',')
-    });
+    };
+    originPoint.set(pt);
+    addToRecentOrigins(pt);
     originQuery = '';
     originResults = [];
-    originSelectedPOI = null;
+    originShowRecent = false;
     loadOriginPOIs(parseFloat(place.lat), parseFloat(place.lon));
   }
 
   function selectDestPlace(place) {
-    destinationPoint.set({
+    const pt = {
       lat: parseFloat(place.lat),
       lon: parseFloat(place.lon),
       name: place.display_name.split(',').slice(0, 3).join(',')
-    });
+    };
+    destinationPoint.set(pt);
+    addToRecentDestinations(pt);
     destQuery = '';
     destResults = [];
-    destSelectedPOI = null;
+    destShowRecent = false;
     loadDestPOIs(parseFloat(place.lat), parseFloat(place.lon));
+  }
+
+  function selectOriginRecent(place) {
+    originPoint.set(place);
+    addToRecentOrigins(place);
+    originQuery = place.name || '';
+    originShowRecent = false;
+    loadOriginPOIs(place.lat, place.lon);
+  }
+
+  function selectDestRecent(place) {
+    destinationPoint.set(place);
+    addToRecentDestinations(place);
+    destQuery = place.name || '';
+    destShowRecent = false;
+    loadDestPOIs(place.lat, place.lon);
   }
 
   function onOriginPOIChange(e) {
     const idx = parseInt(e.target.value);
     if (idx >= 0 && originPOIResults[idx]) {
       const poi = originPOIResults[idx];
-      originSelectedPOI = poi;
-      originPoint.set({
+      const pt = {
         lat: poi.lat,
         lon: poi.lon,
         name: poi.tags?.name || poi.tags?.tourism || poi.tags?.amenity || 'POI'
-      });
+      };
+      originPoint.set(pt);
+      addToRecentOrigins(pt);
+      originShowRecent = false;
     }
   }
 
@@ -130,39 +152,45 @@
     const idx = parseInt(e.target.value);
     if (idx >= 0 && destPOIResults[idx]) {
       const poi = destPOIResults[idx];
-      destSelectedPOI = poi;
-      destinationPoint.set({
+      const pt = {
         lat: poi.lat,
         lon: poi.lon,
         name: poi.tags?.name || poi.tags?.tourism || poi.tags?.amenity || 'POI'
-      });
+      };
+      destinationPoint.set(pt);
+      addToRecentDestinations(pt);
+      destShowRecent = false;
     }
   }
 
   function setOriginCoords() {
     if (originLat && originLon) {
-      originPoint.set({
+      const pt = {
         lat: parseFloat(originLat),
         lon: parseFloat(originLon),
         name: `Custom (${originLat}, ${originLon})`
-      });
+      };
+      originPoint.set(pt);
+      addToRecentOrigins(pt);
       originQuery = '';
       originResults = [];
-      originSelectedPOI = null;
+      originShowRecent = false;
       loadOriginPOIs(parseFloat(originLat), parseFloat(originLon));
     }
   }
 
   function setDestCoords() {
     if (destLat && destLon) {
-      destinationPoint.set({
+      const pt = {
         lat: parseFloat(destLat),
         lon: parseFloat(destLon),
         name: `Custom (${destLat}, ${destLon})`
-      });
+      };
+      destinationPoint.set(pt);
+      addToRecentDestinations(pt);
       destQuery = '';
       destResults = [];
-      destSelectedPOI = null;
+      destShowRecent = false;
       loadDestPOIs(parseFloat(destLat), parseFloat(destLon));
     }
   }
@@ -174,7 +202,7 @@
     originQuery = '';
     originResults = [];
     originPOIResults = [];
-    originSelectedPOI = null;
+    originShowRecent = false;
   }
 
   function clearDest() {
@@ -184,12 +212,30 @@
     destQuery = '';
     destResults = [];
     destPOIResults = [];
-    destSelectedPOI = null;
+    destShowRecent = false;
+  }
+
+  function toggleOriginRecent() {
+    originShowRecent = !originShowRecent;
+    if (originShowRecent) {
+      originQuery = '';
+      originResults = [];
+    }
+  }
+
+  function toggleDestRecent() {
+    destShowRecent = !destShowRecent;
+    if (destShowRecent) {
+      destQuery = '';
+      destResults = [];
+    }
   }
 
   function selectFromHistory(item) {
     originPoint.set(item.origin);
     destinationPoint.set(item.destination);
+    addToRecentOrigins(item.origin);
+    addToRecentDestinations(item.destination);
     showHistory = false;
   }
 
@@ -202,10 +248,7 @@
   <div class="flex items-center justify-between">
     <h2 class="text-xl font-bold text-gray-900 dark:text-white">Route</h2>
     {#if $history.length > 0}
-      <button
-        onclick={() => showHistory = !showHistory}
-        class="text-xs text-blue-600 dark:text-blue-400 underline"
-      >
+      <button onclick={() => showHistory = !showHistory} class="text-xs text-blue-600 underline">
         History ({$history.length})
       </button>
     {/if}
@@ -214,19 +257,14 @@
   {#if showHistory && $history.length > 0}
     <div class="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
       <div class="flex justify-between items-center mb-2">
-        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent Routes</h3>
+        <h3 class="text-sm font-semibold">Recent Routes</h3>
         <button onclick={() => clearHistory()} class="text-xs text-red-600 underline">Clear all</button>
       </div>
-      <ul class="max-h-40 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
+      <ul class="max-h-40 overflow-y-auto divide-y">
         {#each $history as item}
           <li>
-            <button
-              onclick={() => selectFromHistory(item)}
-              class="w-full text-left p-2 hover:bg-gray-200 dark:hover:bg-gray-700 text-xs"
-            >
-              <p class="font-medium text-gray-800 dark:text-gray-200 truncate">
-                {item.origin.name || 'Origin'} → {item.destination.name || 'Destination'}
-              </p>
+            <button onclick={() => selectFromHistory(item)} class="w-full text-left p-2 hover:bg-gray-200 text-xs">
+              <p class="font-medium truncate">{item.origin.name} → {item.destination.name}</p>
               <p class="text-gray-500">{formatDistance(item.distance)}</p>
             </button>
           </li>
@@ -236,16 +274,17 @@
   {/if}
 
   <div class="space-y-4">
-    <div class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-      <h3 class="font-semibold text-red-800 dark:text-red-200 mb-2">Origin</h3>
+    <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+      <h3 class="font-semibold text-red-800 mb-2">Origin</h3>
 
       <div class="relative">
         <input
           type="text"
           bind:value={originQuery}
           oninput={handleOriginInput}
-          placeholder="Search origin place..."
-          class="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+          onfocus={() => originQuery.length === 0 && toggleOriginRecent()}
+          placeholder="Search origin..."
+          class="w-full px-3 py-2 pr-10 border rounded-lg bg-white text-sm"
         />
         {#if originLoading}
           <div class="absolute right-3 top-2">
@@ -254,14 +293,23 @@
         {/if}
       </div>
 
+      {#if originShowRecent && $recentOrigins.length > 0}
+        <ul class="mt-2 bg-white border rounded-lg shadow max-h-40 overflow-y-auto">
+          {#each $recentOrigins as place}
+            <li>
+              <button onclick={() => selectOriginRecent(place)} class="w-full text-left px-3 py-2 hover:bg-gray-100 text-xs border-b last:border-0">
+                <span class="text-gray-400 mr-2">🕐</span>{place.name}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
       {#if originResults.length > 0}
-        <ul class="mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+        <ul class="mt-2 bg-white border rounded-lg shadow max-h-40 overflow-y-auto">
           {#each originResults as place}
             <li>
-              <button
-                onclick={() => selectOriginPlace(place)}
-                class="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-xs border-b border-gray-100 dark:border-gray-700 last:border-0"
-              >
+              <button onclick={() => selectOriginPlace(place)} class="w-full text-left px-3 py-2 hover:bg-gray-100 text-xs border-b last:border-0">
                 {place.display_name.split(',').slice(0, 3).join(',')}
               </button>
             </li>
@@ -271,30 +319,24 @@
 
       {#if originPOIResults.length > 0}
         <div class="mt-3">
-          <label class="text-xs text-gray-600 dark:text-gray-400 block mb-1">Hotels & POIs nearby:</label>
-          <select
-            onchange={onOriginPOIChange}
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm appearance-none cursor-pointer"
-          >
-            <option value="">-- Select a place --</option>
+          <label class="text-xs text-gray-600 block mb-1">Hotels & POIs nearby:</label>
+          <select onchange={onOriginPOIChange} class="w-full px-3 py-2 border rounded-lg bg-white text-sm">
+            <option value="">-- Select --</option>
             {#each originPOIResults as poi, i}
               <option value={i}>
-                {poi.tags?.name || poi.tags?.tourism || poi.tags?.amenity || 'Unnamed'} ({poi.tags?.tourism || poi.tags?.amenity || 'place'})
+                {poi.tags?.name || poi.tags?.tourism || 'Unnamed'} ({poi.tags?.tourism || poi.tags?.amenity})
               </option>
             {/each}
           </select>
         </div>
       {/if}
 
-      <button
-        onclick={() => originShowCoords = !originShowCoords}
-        class="text-xs text-red-600 dark:text-red-400 underline mt-2 block"
-      >
+      <button onclick={() => originShowCoords = !originShowCoords} class="text-xs text-red-600 underline mt-2 block">
         {originShowCoords ? 'Hide' : 'Show'} coordinates
       </button>
 
       {#if originShowCoords}
-        <div class="mt-2 flex gap-2 items-center">
+        <div class="mt-2 flex gap-2">
           <input type="number" step="any" bind:value={originLat} placeholder="Lat" class="flex-1 px-2 py-1 border rounded text-sm" />
           <input type="number" step="any" bind:value={originLon} placeholder="Lon" class="flex-1 px-2 py-1 border rounded text-sm" />
           <button onclick={setOriginCoords} disabled={!originLat || !originLon} class="px-3 py-1 bg-red-600 text-white rounded text-sm">Set</button>
@@ -302,25 +344,24 @@
       {/if}
 
       {#if $originPoint}
-        <div class="mt-2 p-2 bg-green-100 dark:bg-green-900/40 rounded flex justify-between items-center">
-          <span class="text-xs font-medium text-green-800 dark:text-green-200 truncate flex-1 mr-2">
-            {$originPoint.name}
-          </span>
+        <div class="mt-2 p-2 bg-green-100 rounded flex justify-between items-center">
+          <span class="text-xs font-medium truncate flex-1 mr-2">{$originPoint.name}</span>
           <button onclick={clearOrigin} class="text-red-600 text-xs underline">Clear</button>
         </div>
       {/if}
     </div>
 
-    <div class="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-      <h3 class="font-semibold text-green-800 dark:text-green-200 mb-2">Destination</h3>
+    <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+      <h3 class="font-semibold text-green-800 mb-2">Destination</h3>
 
       <div class="relative">
         <input
           type="text"
           bind:value={destQuery}
           oninput={handleDestInput}
-          placeholder="Search destination place..."
-          class="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+          onfocus={() => destQuery.length === 0 && toggleDestRecent()}
+          placeholder="Search destination..."
+          class="w-full px-3 py-2 pr-10 border rounded-lg bg-white text-sm"
         />
         {#if destLoading}
           <div class="absolute right-3 top-2">
@@ -329,14 +370,23 @@
         {/if}
       </div>
 
+      {#if destShowRecent && $recentDestinations.length > 0}
+        <ul class="mt-2 bg-white border rounded-lg shadow max-h-40 overflow-y-auto">
+          {#each $recentDestinations as place}
+            <li>
+              <button onclick={() => selectDestRecent(place)} class="w-full text-left px-3 py-2 hover:bg-gray-100 text-xs border-b last:border-0">
+                <span class="text-gray-400 mr-2">🕐</span>{place.name}
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
       {#if destResults.length > 0}
-        <ul class="mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+        <ul class="mt-2 bg-white border rounded-lg shadow max-h-40 overflow-y-auto">
           {#each destResults as place}
             <li>
-              <button
-                onclick={() => selectDestPlace(place)}
-                class="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-xs border-b border-gray-100 dark:border-gray-700 last:border-0"
-              >
+              <button onclick={() => selectDestPlace(place)} class="w-full text-left px-3 py-2 hover:bg-gray-100 text-xs border-b last:border-0">
                 {place.display_name.split(',').slice(0, 3).join(',')}
               </button>
             </li>
@@ -346,30 +396,24 @@
 
       {#if destPOIResults.length > 0}
         <div class="mt-3">
-          <label class="text-xs text-gray-600 dark:text-gray-400 block mb-1">Hotels & POIs nearby:</label>
-          <select
-            onchange={onDestPOIChange}
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm appearance-none cursor-pointer"
-          >
-            <option value="">-- Select a place --</option>
+          <label class="text-xs text-gray-600 block mb-1">Hotels & POIs nearby:</label>
+          <select onchange={onDestPOIChange} class="w-full px-3 py-2 border rounded-lg bg-white text-sm">
+            <option value="">-- Select --</option>
             {#each destPOIResults as poi, i}
               <option value={i}>
-                {poi.tags?.name || poi.tags?.tourism || poi.tags?.amenity || 'Unnamed'} ({poi.tags?.tourism || poi.tags?.amenity || 'place'})
+                {poi.tags?.name || poi.tags?.tourism || 'Unnamed'} ({poi.tags?.tourism || poi.tags?.amenity})
               </option>
             {/each}
           </select>
         </div>
       {/if}
 
-      <button
-        onclick={() => destShowCoords = !destShowCoords}
-        class="text-xs text-green-600 dark:text-green-400 underline mt-2 block"
-      >
+      <button onclick={() => destShowCoords = !destShowCoords} class="text-xs text-green-600 underline mt-2 block">
         {destShowCoords ? 'Hide' : 'Show'} coordinates
       </button>
 
       {#if destShowCoords}
-        <div class="mt-2 flex gap-2 items-center">
+        <div class="mt-2 flex gap-2">
           <input type="number" step="any" bind:value={destLat} placeholder="Lat" class="flex-1 px-2 py-1 border rounded text-sm" />
           <input type="number" step="any" bind:value={destLon} placeholder="Lon" class="flex-1 px-2 py-1 border rounded text-sm" />
           <button onclick={setDestCoords} disabled={!destLat || !destLon} class="px-3 py-1 bg-green-600 text-white rounded text-sm">Set</button>
@@ -377,10 +421,8 @@
       {/if}
 
       {#if $destinationPoint}
-        <div class="mt-2 p-2 bg-green-100 dark:bg-green-900/40 rounded flex justify-between items-center">
-          <span class="text-xs font-medium text-green-800 dark:text-green-200 truncate flex-1 mr-2">
-            {$destinationPoint.name}
-          </span>
+        <div class="mt-2 p-2 bg-green-100 rounded flex justify-between items-center">
+          <span class="text-xs font-medium truncate flex-1 mr-2">{$destinationPoint.name}</span>
           <button onclick={clearDest} class="text-red-600 text-xs underline">Clear</button>
         </div>
       {/if}
