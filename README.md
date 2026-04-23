@@ -1,5 +1,7 @@
 # Le Douanier
 
+![Le Douanier App Screenshot](/screenshot.png)
+
 ## English
 
 A hiking distance calculator for coastal trails in France.
