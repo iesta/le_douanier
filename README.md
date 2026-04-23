@@ -1,42 +1,53 @@
-# sv
+# Le Douanier
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A hiking distance calculator for the GR34 Sentier des Douaniers (French customs trail) along Brittany's coast.
 
-## Creating a project
+## What it does
 
-If you're seeing this, you've probably already done this step. Congrats!
+- Search for any place, hotel, or restaurant along the trail
+- Select origin and destination points
+- Calculates trail distance between points using Haversine formula
+- Shows elevation gain/loss and estimated hiking time
+- Interactive map with the full trail and selected segment
 
-```sh
-# create a new project
-npx sv create my-app
-```
+## Tech Stack
 
-To recreate this project with the same configuration:
+- **Framework**: SvelteKit
+- **Styling**: TailwindCSS
+- **Map**: Leaflet + OpenStreetMap
+- **APIs**: Nominatim (geocoding), Overpass (POI search)
+- **Data**: Hardcoded GPX track (GR34 2020, ~2090km)
 
-```sh
-# recreate this project
-npx sv@0.15.1 create --template minimal --types jsdoc --no-install gr34-app
-```
+## Features
 
-## Developing
+- 5-tab interface: Origin, Destination, Distance/Info, Map, Preferences
+- State machine: changing origin/destination auto-updates results
+- Search places with autocomplete
+- Find hotels/POIs within 50km of selected location
+- Coordinates input available (hidden by default)
+- Dark mode support
+- km/miles toggle (in Preferences)
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## Running
 
-```sh
+```bash
+cd le_douanier
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+## Project Structure
 
-To create a production version of your app:
-
-```sh
-npm run build
+```
+src/
+├── lib/
+│   ├── components/     # Tab components
+│   ├── stores/         # Svelte stores (state)
+│   └── utils/          # Geo utilities, API calls
+├── routes/             # SvelteKit pages
+static/gpx/             # GR34 track data
 ```
 
-You can preview the production build with `npm run preview`.
+## License
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+MIT
