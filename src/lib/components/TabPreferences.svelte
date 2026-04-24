@@ -99,6 +99,7 @@
   <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">About</h3>
     <p class="text-xs text-gray-500">Le Douanier {VERSION}</p>
-    <p class="text-xs text-gray-400 mt-1">Hiking distance calculator for GR34 & GR20</p>
+    <p class="text-xs text-gray-400">Hiking distance calculator for GR34 & GR20</p>
+    <a href="https://github.com/iesta/le_douanier" target="_blank" rel="noopener" class="text-xs text-blue-600 hover:underline mt-1 block">GitHub</a>
   </div>
 </div>

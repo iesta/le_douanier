@@ -6,7 +6,8 @@
     destinationNearestTrackPoint,
     trackPoints,
     trackName,
-    addToHistory
+    addToHistory,
+    selectedTab
   } from '$lib/stores/index.js';
   import { calculateTrailDistance, calculateElevationStats, estimateHikingTime } from '$lib/utils/geo.js';
   import { exportGPX, downloadGPX } from '$lib/utils/export.js';
@@ -52,6 +53,10 @@
     const gpx = exportGPX($trackPoints, startIdx, endIdx, $originPoint.name, $destinationPoint.name, $trackName || 'GR34');
     const filename = `le-douanier-${$originPoint.name.replace(/[^a-z0-9]/gi, '-').substring(0, 20)}-${$destinationPoint.name.replace(/[^a-z0-9]/gi, '-').substring(0, 20)}.gpx`;
     downloadGPX(gpx, filename);
+  }
+
+  function goToMap() {
+    selectedTab.set(3);
   }
 </script>
 
@@ -106,8 +111,18 @@
         <p class="text-xs"><span class="font-medium">To:</span> {$destinationPoint?.name} (#{$destinationNearestTrackPoint?.index})</p>
       </div>
 
+      <div class="p-3 bg-orange-50 rounded-lg">
+        <p class="text-xs text-orange-600 uppercase mb-2">Straight Line Distance</p>
+        <p class="text-xs"><span class="font-medium">Start → Path:</span> {formatNumber($distanceInfo.originToPath)} m</p>
+        <p class="text-xs"><span class="font-medium">End → Path:</span> {formatNumber($distanceInfo.destinationToPath)} m</p>
+      </div>
+
+      <button onclick={goToMap} class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+        View on Map
+      </button>
+
       <button onclick={downloadSegment} class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
-        ⬇ Download GPX Segment
+        Download GPX Segment
       </button>
     </div>
   {:else}
