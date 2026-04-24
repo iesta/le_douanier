@@ -11,6 +11,11 @@
   let originLon = $state('');
   let originShowRecent = $state(false);
   let originSelectedIndex = $state(-1);
+  let originDropdownOpen = $state(false);
+
+  let destShowRecent = $state(false);
+  let destSelectedIndex = $state(-1);
+  let destDropdownOpen = $state(false);
 
   let destQuery = $state('');
   let destResults = $state([]);
@@ -19,8 +24,6 @@
   let destShowCoords = $state(false);
   let destLat = $state('');
   let destLon = $state('');
-  let destShowRecent = $state(false);
-  let destSelectedIndex = $state(-1);
 
   let showHistory = $state(false);
 
@@ -49,6 +52,7 @@
     } else if (e.key === 'Escape') {
       originResults = [];
       originSelectedIndex = -1;
+      originDropdownOpen = false;
     }
   }
 
@@ -74,6 +78,7 @@
     } else if (e.key === 'Escape') {
       destResults = [];
       destSelectedIndex = -1;
+      destDropdownOpen = false;
     }
   }
 
@@ -92,15 +97,18 @@
             seen.add(key);
             return true;
           });
+          originDropdownOpen = originResults.length > 0;
         } catch (e) {
           originResults = [];
+          originDropdownOpen = false;
         } finally {
           originLoading = false;
         }
       } else if (originQuery.length === 0 && originShowRecent) {
-        // show recent
+        originDropdownOpen = false;
       } else {
         originResults = [];
+        originDropdownOpen = false;
       }
     }, 300);
   }
@@ -121,13 +129,16 @@
             seen.add(key);
             return true;
           });
+          destDropdownOpen = destResults.length > 0;
         } catch (e) {
           destResults = [];
+          destDropdownOpen = false;
         } finally {
           destLoading = false;
         }
       } else {
         destResults = [];
+        destDropdownOpen = false;
       }
     }, 300);
   }
@@ -169,6 +180,7 @@
     originPOIResults = [];
     originShowRecent = false;
     originSelectedIndex = -1;
+    originDropdownOpen = false;
   }
 
   function selectDestPlace(place) {
@@ -184,6 +196,7 @@
     destPOIResults = [];
     destShowRecent = false;
     destSelectedIndex = -1;
+    destDropdownOpen = false;
   }
 
   function selectOriginRecent(place) {
@@ -381,7 +394,7 @@
         </ul>
       {/if}
 
-      {#if originResults.length > 0}
+      {#if originDropdownOpen}
         <ul class="mt-2 bg-white border rounded-lg shadow max-h-40 overflow-y-auto">
           {#each originResults as place, i}
             <li>
@@ -465,7 +478,7 @@
         </ul>
       {/if}
 
-      {#if destResults.length > 0}
+      {#if destDropdownOpen}
         <ul class="mt-2 bg-white border rounded-lg shadow max-h-40 overflow-y-auto">
           {#each destResults as place, i}
             <li>

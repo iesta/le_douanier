@@ -2,14 +2,74 @@ import { writable, derived } from 'svelte/store';
 import { findNearestTrackPointIndex } from '$lib/utils/geo.js';
 import { calculateBounds } from '$lib/utils/geocode.js';
 
+const HISTORY_KEY = 'le_douanier_history';
+const RECENT_PLACES_KEY = 'le_douanier_recent_places';
+const SELECTED_GPX_KEY = 'le_douanier_selected_gpx';
+
+function isLocalStorageAvailable() {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (!window.localStorage) return false;
+    const test = '__storage_test__';
+    window.localStorage.setItem(test, test);
+    window.localStorage.removeItem(test);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function loadHistory() {
+  if (!isLocalStorageAvailable()) return [];
+  try {
+    const data = localStorage.getItem(HISTORY_KEY);
+    const parsed = data ? JSON.parse(data) : [];
+    return parsed.filter(h => !(h.origin.lat === h.destination.lat && h.origin.lon === h.destination.lon));
+  } catch { return []; }
+}
+
+function saveHistory(history) {
+  if (!isLocalStorageAvailable()) return;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function loadRecentPlaces() {
+  if (!isLocalStorageAvailable()) return [];
+  try {
+    const data = localStorage.getItem(RECENT_PLACES_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch { return []; }
+}
+
+function saveRecentPlaces(places) {
+  if (!isLocalStorageAvailable()) return;
+  localStorage.setItem(RECENT_PLACES_KEY, JSON.stringify(places));
+}
+
+function loadSelectedGpx() {
+  if (!isLocalStorageAvailable()) return null;
+  try {
+    return localStorage.getItem(SELECTED_GPX_KEY);
+  } catch { return null; }
+}
+
+function saveSelectedGpx(name) {
+  if (!isLocalStorageAvailable()) return;
+  localStorage.setItem(SELECTED_GPX_KEY, name);
+}
+
 export const availableGPX = writable([
   { name: 'GR34 Sentier des Douaniers (Brittany)', file: 'gr34-sentier-des-douaniers-2020.gpx', distance: '~2090km' },
   { name: 'GR20 Corsica (North-South)', file: 'gr20-2018-complete-northsouth.gpx', distance: '~180km' }
 ]);
 
-export const selectedGpx = writable('gr34-sentier-des-douaniers-2020.gpx');
+export const selectedGpx = writable(loadSelectedGpx() || 'gr34-sentier-des-douaniers-2020.gpx');
 export const trackPoints = writable([]);
 export const trackName = writable('');
+
+selectedGpx.subscribe(gpx => {
+  saveSelectedGpx(gpx);
+});
 
 export const trackBounds = derived(trackPoints, ($trackPoints) => {
   return calculateBounds($trackPoints, 100);
@@ -18,7 +78,7 @@ export const trackBounds = derived(trackPoints, ($trackPoints) => {
 export const originPoint = writable(null);
 export const destinationPoint = writable(null);
 
-export const recentPlaces = writable([]);
+export const recentPlaces = writable(loadRecentPlaces());
 
 export const recentPlacesForCurrentGpx = derived(
   [recentPlaces, selectedGpx],
@@ -30,11 +90,13 @@ export const recentPlacesForCurrentGpx = derived(
 export function addToRecentPlaces(place) {
   recentPlaces.update(items => {
     const filtered = items.filter(i => !(i.lat === place.lat && i.lon === place.lon && i.gpx === $selectedGpx));
-    return [{ ...place, gpx: $selectedGpx }, ...filtered].slice(0, 20);
+    const updated = [{ ...place, gpx: $selectedGpx }, ...filtered].slice(0, 20);
+    saveRecentPlaces(updated);
+    return updated;
   });
 }
 
-export const history = writable([]);
+export const history = writable(loadHistory());
 
 export const historyForCurrentGpx = derived(
   [history, selectedGpx],
@@ -60,12 +122,15 @@ export function addToHistory(origin, destination, distance) {
       item.gpx === $selectedGpx
     );
     if (exists) return h;
-    return [entry, ...h].slice(0, 20);
+    const updated = [entry, ...h].slice(0, 20);
+    saveHistory(updated);
+    return updated;
   });
 }
 
 export function clearHistory() {
   history.set([]);
+  saveHistory([]);
 }
 
 export const originNearestTrackPoint = derived(
