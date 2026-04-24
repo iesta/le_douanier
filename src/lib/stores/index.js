@@ -1,4 +1,4 @@
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { findNearestTrackPointIndex } from '$lib/utils/geo.js';
 import { calculateBounds } from '$lib/utils/geocode.js';
 
@@ -88,9 +88,10 @@ export const recentPlacesForCurrentGpx = derived(
 );
 
 export function addToRecentPlaces(place) {
+  const gpx = get(selectedGpx);
   recentPlaces.update(items => {
-    const filtered = items.filter(i => !(i.lat === place.lat && i.lon === place.lon && i.gpx === $selectedGpx));
-    const updated = [{ ...place, gpx: $selectedGpx }, ...filtered].slice(0, 20);
+    const filtered = items.filter(i => !(i.lat === place.lat && i.lon === place.lon && i.gpx === gpx));
+    const updated = [{ ...place, gpx }, ...filtered].slice(0, 20);
     saveRecentPlaces(updated);
     return updated;
   });
@@ -107,10 +108,11 @@ export const historyForCurrentGpx = derived(
 
 export function addToHistory(origin, destination, distance) {
   if (origin.lat === destination.lat && origin.lon === destination.lon) return;
+  const gpx = get(selectedGpx);
   history.update(h => {
     const entry = {
       id: Date.now(),
-      gpx: $selectedGpx,
+      gpx,
       origin: { name: origin.name, lat: origin.lat, lon: origin.lon },
       destination: { name: destination.name, lat: destination.lat, lon: destination.lon },
       distance,
@@ -119,7 +121,7 @@ export function addToHistory(origin, destination, distance) {
     const exists = h.some(item =>
       item.origin.lat === origin.lat && item.origin.lon === origin.lon &&
       item.destination.lat === destination.lat && item.destination.lon === destination.lon &&
-      item.gpx === $selectedGpx
+      item.gpx === gpx
     );
     if (exists) return h;
     const updated = [entry, ...h].slice(0, 20);
