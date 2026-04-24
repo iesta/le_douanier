@@ -6,8 +6,16 @@
 
 	let { children } = $props();
 
-	onMount(() => {
-		if (import.meta.env.VITE_DEV_MODE) return;
+	onMount(async () => {
+		if (dev) {
+			try {
+				const regs = await navigator.serviceWorker.getRegistrations();
+				for (const reg of regs) {
+					await reg.unregister();
+				}
+			} catch (e) {}
+			return;
+		}
 		if ('serviceWorker' in navigator) {
 			navigator.serviceWorker.register('/sw.js');
 		}

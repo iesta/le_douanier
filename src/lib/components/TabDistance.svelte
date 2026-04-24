@@ -65,7 +65,12 @@
 
   {#if !$originPoint || !$destinationPoint}
     <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-      <p class="text-yellow-800">Set origin and destination in the Route tab first.</p>
+      <div class="flex justify-between items-center">
+        <p class="text-yellow-800">Set origin and destination in the Route tab first.</p>
+        <button onclick={() => selectedTab.set(1)} class="px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm font-medium hover:bg-yellow-700">
+          Go to Route
+        </button>
+      </div>
     </div>
   {:else if $distanceInfo}
     <div class="space-y-4">
