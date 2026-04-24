@@ -1,5 +1,5 @@
 <script>
-  import { selectedGpx, availableGPX, trackPoints, trackName } from '$lib/stores/index.js';
+  import { selectedGpx, availableGPX, trackPoints, trackName, originPoint, destinationPoint } from '$lib/stores/index.js';
   import { parseGPX } from '$lib/utils/geo.js';
   import { selectedTab } from '$lib/stores/index.js';
 
@@ -14,6 +14,8 @@
     loading = true;
     error = null;
     selectedGpx.set(file);
+    originPoint.set(null);
+    destinationPoint.set(null);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('le_douanier_selected_gpx', file);
     }
