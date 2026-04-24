@@ -61,7 +61,7 @@
 </script>
 
 <div class="p-4 pb-20">
-  <h2 class="text-xl font-bold mb-4">Distance & Info</h2>
+  <h2 class="text-xl font-bold mb-4 text-white">Distance & Info</h2>
 
   {#if !$originPoint || !$destinationPoint}
     <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -70,9 +70,16 @@
   {:else if $distanceInfo}
     <div class="space-y-4">
       <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
-        <p class="text-xs text-green-600 uppercase">Distance</p>
-        <p class="text-3xl font-bold text-green-700">{formatNumber($distanceInfo.trailDistance / 1000)} km</p>
-        <p class="text-sm text-green-600">({formatNumber($distanceInfo.trailDistance)} m)</p>
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs text-green-600 uppercase">Distance</p>
+            <p class="text-3xl font-bold text-green-700">{formatNumber($distanceInfo.trailDistance / 1000)} km</p>
+            <p class="text-sm text-green-600">({formatNumber($distanceInfo.trailDistance)} m)</p>
+          </div>
+          <button onclick={goToMap} class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 whitespace-nowrap">
+            View on Map
+          </button>
+        </div>
       </div>
 
       <div class="p-4 bg-purple-50 border border-purple-200 rounded-lg">
@@ -87,26 +94,24 @@
         <div class="p-3 bg-green-50 rounded-lg">
           <p class="text-xs text-green-600 uppercase">Altitude Gain</p>
           <p class="text-lg font-bold text-green-700">+{formatNumber($distanceInfo.gain)} m</p>
+          <p class="text-xs text-gray-500 uppercase mt-1">Start Alt</p>
+          <p class="text-sm font-bold text-gray-700">{formatNumber($distanceInfo.startEle)} m</p>
         </div>
         <div class="p-3 bg-red-50 rounded-lg">
           <p class="text-xs text-red-600 uppercase">Altitude Loss</p>
           <p class="text-lg font-bold text-red-700">-{formatNumber($distanceInfo.loss)} m</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div class="p-3 bg-gray-100 rounded-lg">
-          <p class="text-xs text-gray-600 uppercase">Start Altitude</p>
-          <p class="text-lg font-bold text-gray-700">{formatNumber($distanceInfo.startEle)} m</p>
-        </div>
-        <div class="p-3 bg-gray-100 rounded-lg">
-          <p class="text-xs text-gray-600 uppercase">End Altitude</p>
-          <p class="text-lg font-bold text-gray-700">{formatNumber($distanceInfo.endEle)} m</p>
+          <p class="text-xs text-gray-500 uppercase mt-1">End Alt</p>
+          <p class="text-sm font-bold text-gray-700">{formatNumber($distanceInfo.endEle)} m</p>
         </div>
       </div>
 
       <div class="p-3 bg-blue-50 rounded-lg">
-        <p class="text-xs text-blue-600 uppercase mb-2">Points</p>
+        <div class="flex justify-between items-center mb-2">
+          <p class="text-xs text-blue-600 uppercase">Points</p>
+          <button onclick={downloadSegment} class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            Download GPX
+          </button>
+        </div>
         <p class="text-xs"><span class="font-medium">From:</span> {$originPoint?.name} (#{$originNearestTrackPoint?.index})</p>
         <p class="text-xs"><span class="font-medium">To:</span> {$destinationPoint?.name} (#{$destinationNearestTrackPoint?.index})</p>
       </div>
@@ -116,14 +121,6 @@
         <p class="text-xs"><span class="font-medium">Start → Path:</span> {formatNumber($distanceInfo.originToPath)} m</p>
         <p class="text-xs"><span class="font-medium">End → Path:</span> {formatNumber($distanceInfo.destinationToPath)} m</p>
       </div>
-
-      <button onclick={goToMap} class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
-        View on Map
-      </button>
-
-      <button onclick={downloadSegment} class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
-        Download GPX Segment
-      </button>
     </div>
   {:else}
     <div class="p-4 bg-gray-50 border rounded-lg">
