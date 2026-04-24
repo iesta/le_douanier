@@ -33,7 +33,7 @@ export async function searchPlace(query, limit = 10, bounds = null) {
   try {
     const params = new URLSearchParams({
       q: query,
-      limit,
+      limit: limit * 2,
       lang: 'fr'
     });
 
@@ -48,12 +48,22 @@ export async function searchPlace(query, limit = 10, bounds = null) {
     if (!res.ok) throw new Error('Photon failed');
 
     const data = await res.json();
-    return (data.features || []).map(f => ({
-      lat: f.geometry.coordinates[1],
-      lon: f.geometry.coordinates[0],
-      display_name: f.properties.name + (f.properties.state ? `, ${f.properties.state}` : ''),
-      type: f.properties.type
-    }));
+    const seen = new Set();
+    const results = [];
+    for (const f of (data.features || [])) {
+      const name = f.properties.name;
+      if (!seen.has(name)) {
+        seen.add(name);
+        results.push({
+          lat: f.geometry.coordinates[1],
+          lon: f.geometry.coordinates[0],
+          display_name: name + (f.properties.state ? `, ${f.properties.state}` : ''),
+          type: f.properties.type
+        });
+      }
+      if (results.length >= limit) break;
+    }
+    return results;
   } catch (e) {
     console.warn('Photon failed, falling back to Nominatim:', e);
   }

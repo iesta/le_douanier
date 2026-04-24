@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { selectedTab, trackPoints, trackName, selectedGpx } from '$lib/stores/index.js';
+  import { selectedTab, trackPoints, trackName, selectedGpx, preferences } from '$lib/stores/index.js';
   import { parseGPX } from '$lib/utils/geo.js';
   import TabBar from '$lib/components/TabBar.svelte';
   import TabGpx from '$lib/components/TabGpx.svelte';
@@ -28,12 +28,18 @@
       loading = false;
     }
   });
+
+  $effect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', $preferences.darkMode);
+    }
+  });
 </script>
 
-<div class="h-screen w-screen flex flex-col overflow-hidden bg-gray-100">
-  <header class="bg-white border-b border-gray-200 px-4 py-2 flex-shrink-0 z-20">
-    <h1 class="text-lg font-bold text-gray-900">Le Douanier</h1>
-    <p class="text-xs text-gray-500">
+<div class="h-screen w-screen flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900">
+  <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex-shrink-0 z-20">
+    <h1 class="text-lg font-bold text-gray-900 dark:text-white">Le Douanier</h1>
+    <p class="text-xs text-gray-500 dark:text-gray-400">
       {#if loading}
         Loading...
       {:else if error}
@@ -45,32 +51,36 @@
   </header>
 
   <div class="flex-1 relative overflow-hidden">
-    <div class="absolute inset-0 z-0">
-      <TabMap />
-    </div>
+    {#if $selectedTab === 3}
+      <div class="absolute inset-0 z-0">
+        <TabMap />
+      </div>
+    {:else}
+      <div class="absolute inset-0 z-0 bg-gray-100 dark:bg-gray-900"></div>
+    {/if}
 
     {#if !loading && !error}
       {#if $selectedTab === 0}
         <div class="absolute inset-x-0 top-0 z-10 overflow-y-auto max-h-full pb-20">
-          <div class="bg-white/95 min-h-full">
+          <div class="bg-white/95 dark:bg-gray-800/95 min-h-full">
             <TabGpx />
           </div>
         </div>
       {:else if $selectedTab === 1}
         <div class="absolute inset-x-0 top-0 z-10 overflow-y-auto max-h-full pb-20">
-          <div class="bg-white/95 min-h-full">
+          <div class="bg-white/95 dark:bg-gray-800/95 min-h-full">
             <TabRoute />
           </div>
         </div>
       {:else if $selectedTab === 2}
         <div class="absolute inset-x-0 top-0 z-10 overflow-y-auto max-h-full pb-20">
-          <div class="bg-white/95 min-h-full">
+          <div class="bg-white/95 dark:bg-gray-800/95 min-h-full">
             <TabDistance />
           </div>
         </div>
       {:else if $selectedTab === 4}
         <div class="absolute inset-x-0 top-0 z-10 overflow-y-auto max-h-full pb-20">
-          <div class="bg-white/95 min-h-full">
+          <div class="bg-white/95 dark:bg-gray-800/95 min-h-full">
             <TabPreferences />
           </div>
         </div>

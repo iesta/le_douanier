@@ -12,6 +12,10 @@
   import { exportGPX, downloadGPX } from '$lib/utils/export.js';
   import { derived } from 'svelte/store';
 
+  function formatNumber(num) {
+    return num.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+  }
+
   let lastSavedId = null;
 
   const distanceInfo = derived(
@@ -25,7 +29,9 @@
       const { gain, loss } = calculateElevationStats($trackPoints, startIndex, endIndex);
       const hikingTime = estimateHikingTime(trailDistance, gain);
 
-      return { originToPath: $origin.distanceToUser, destinationToPath: $destination.distanceToUser, trailDistance, gain, loss, hikingTime, startIndex, endIndex };
+      const startEle = $trackPoints[startIndex]?.ele || 0;
+      const endEle = $trackPoints[endIndex]?.ele || 0;
+      return { originToPath: $origin.distanceToUser, destinationToPath: $destination.distanceToUser, trailDistance, gain, loss, hikingTime, startIndex, endIndex, startEle, endEle };
     }
   );
 
@@ -58,37 +64,10 @@
     </div>
   {:else if $distanceInfo}
     <div class="space-y-4">
-      <div class="p-3 bg-gray-100 rounded-lg text-xs">
-        <p><span class="font-medium">From:</span> {$originPoint?.name} (point #{$originNearestTrackPoint?.index})</p>
-        <p><span class="font-medium">To:</span> {$destinationPoint?.name} (point #{$destinationNearestTrackPoint?.index})</p>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div class="p-3 bg-blue-50 rounded-lg">
-          <p class="text-xs text-blue-600 uppercase">Origin → Path</p>
-          <p class="text-lg font-bold text-blue-700">{$distanceInfo.originToPath.toFixed(0)} m</p>
-        </div>
-        <div class="p-3 bg-blue-50 rounded-lg">
-          <p class="text-xs text-blue-600 uppercase">Destination → Path</p>
-          <p class="text-lg font-bold text-blue-700">{$distanceInfo.destinationToPath.toFixed(0)} m</p>
-        </div>
-      </div>
-
       <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
-        <p class="text-xs text-green-600 uppercase">Trail Distance</p>
-        <p class="text-3xl font-bold text-green-700">{$distanceInfo.trailDistance.toFixed(0)} m</p>
-        <p class="text-sm text-green-600">({($distanceInfo.trailDistance / 1000).toFixed(2)} km)</p>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div class="p-3 bg-green-50 rounded-lg">
-          <p class="text-xs text-green-600 uppercase">Altitude Gain</p>
-          <p class="text-lg font-bold text-green-700">+{$distanceInfo.gain.toFixed(0)} m</p>
-        </div>
-        <div class="p-3 bg-red-50 rounded-lg">
-          <p class="text-xs text-red-600 uppercase">Altitude Loss</p>
-          <p class="text-lg font-bold text-red-700">-{$distanceInfo.loss.toFixed(0)} m</p>
-        </div>
+        <p class="text-xs text-green-600 uppercase">Distance</p>
+        <p class="text-3xl font-bold text-green-700">{formatNumber($distanceInfo.trailDistance / 1000)} km</p>
+        <p class="text-sm text-green-600">({formatNumber($distanceInfo.trailDistance)} m)</p>
       </div>
 
       <div class="p-4 bg-purple-50 border border-purple-200 rounded-lg">
@@ -97,6 +76,34 @@
           {Math.floor($distanceInfo.hikingTime)}h {$distanceInfo.hikingTime % 1 > 0 ? Math.round(($distanceInfo.hikingTime % 1) * 60) : '00'}m
         </p>
         <p class="text-xs text-purple-500">at 4 km/h + elevation</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 bg-green-50 rounded-lg">
+          <p class="text-xs text-green-600 uppercase">Altitude Gain</p>
+          <p class="text-lg font-bold text-green-700">+{formatNumber($distanceInfo.gain)} m</p>
+        </div>
+        <div class="p-3 bg-red-50 rounded-lg">
+          <p class="text-xs text-red-600 uppercase">Altitude Loss</p>
+          <p class="text-lg font-bold text-red-700">-{formatNumber($distanceInfo.loss)} m</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 bg-gray-100 rounded-lg">
+          <p class="text-xs text-gray-600 uppercase">Start Altitude</p>
+          <p class="text-lg font-bold text-gray-700">{formatNumber($distanceInfo.startEle)} m</p>
+        </div>
+        <div class="p-3 bg-gray-100 rounded-lg">
+          <p class="text-xs text-gray-600 uppercase">End Altitude</p>
+          <p class="text-lg font-bold text-gray-700">{formatNumber($distanceInfo.endEle)} m</p>
+        </div>
+      </div>
+
+      <div class="p-3 bg-blue-50 rounded-lg">
+        <p class="text-xs text-blue-600 uppercase mb-2">Points</p>
+        <p class="text-xs"><span class="font-medium">From:</span> {$originPoint?.name} (#{$originNearestTrackPoint?.index})</p>
+        <p class="text-xs"><span class="font-medium">To:</span> {$destinationPoint?.name} (#{$destinationNearestTrackPoint?.index})</p>
       </div>
 
       <button onclick={downloadSegment} class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">

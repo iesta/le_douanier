@@ -6,14 +6,20 @@
   let loading = $state(false);
   let error = $state(null);
 
-  async function selectGpx(gpx) {
+  async function selectGpx(event) {
+    const file = event.target.value;
+    const gpx = $availableGPX.find(g => g.file === file);
+    if (!gpx) return;
+
     loading = true;
     error = null;
-    selectedGpx.set(gpx.file);
-    localStorage.setItem('le_douanier_selected_gpx', gpx.file);
+    selectedGpx.set(file);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('le_douanier_selected_gpx', file);
+    }
 
     try {
-      const res = await fetch(`/gpx/${gpx.file}`);
+      const res = await fetch(`/gpx/${file}`);
       if (!res.ok) throw new Error('Failed to load GPX');
       const text = await res.text();
       const points = parseGPX(text);
@@ -31,35 +37,38 @@
   }
 </script>
 
-<div class="p-4 pb-20">
-  <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">Select a Trail</h2>
+<div class="p-4 pb-20 space-y-6">
+  <h2 class="text-xl font-bold text-gray-900 dark:text-white">Select a Trail</h2>
+
+  <div class="relative">
+    <select
+      onchange={selectGpx}
+      value={$selectedGpx}
+      class="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white appearance-none cursor-pointer hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+    >
+      {#each $availableGPX as gpx}
+        <option value={gpx.file}>{gpx.name} ({gpx.distance})</option>
+      {/each}
+    </select>
+    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+      <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  </div>
 
   {#if loading}
     <div class="flex justify-center p-8">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </div>
   {:else if error}
-    <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+    <div class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-800 dark:text-red-200">
       Error: {error}
-    </div>
-  {:else}
-    <div class="space-y-3">
-      {#each $availableGPX as gpx}
-        <button
-          onclick={() => selectGpx(gpx)}
-          class="w-full p-4 text-left rounded-lg border-2 transition-colors {$selectedGpx === gpx.file
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-            : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'}"
-        >
-          <h3 class="font-semibold text-gray-900 dark:text-white">{gpx.name}</h3>
-          <p class="text-sm text-gray-500 mt-1">{gpx.distance}</p>
-        </button>
-      {/each}
     </div>
   {/if}
 
   {#if $trackPoints.length > 0}
-    <div class="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+    <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
       <p class="text-sm text-green-800 dark:text-green-200">
         <span class="font-semibold">{$trackName}</span> loaded<br/>
         <span class="text-xs">{$trackPoints.length} track points</span>

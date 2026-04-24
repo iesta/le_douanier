@@ -6,7 +6,8 @@
     destinationPoint,
     originNearestTrackPoint,
     destinationNearestTrackPoint,
-    trackPoints
+    trackPoints,
+    selectedTab
   } from '$lib/stores/index.js';
 
   let mapContainer = $state(null);
@@ -16,6 +17,7 @@
   let highlightLayer = null;
   let markersLayer = null;
   let connectionLines = null;
+  let mapReady = $state(false);
 
   onMount(() => {
     if (!browser) return;
@@ -44,11 +46,13 @@
 
     map = L.map(mapContainer, {
       center: [48.6, -1.5],
-      zoom: 9
+      zoom: 9,
+      preferCanvas: false
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 18
     }).addTo(map);
 
     trailLayer = L.layerGroup().addTo(map);
@@ -56,66 +60,92 @@
     markersLayer = L.layerGroup().addTo(map);
     connectionLines = L.layerGroup().addTo(map);
 
+    mapReady = true;
+
     if ($trackPoints.length > 0) {
       plotTrail();
     }
+
+    setTimeout(() => {
+      if (map) map.invalidateSize();
+    }, 100);
   }
 
   function plotTrail() {
-    if (!map || !L || $trackPoints.length === 0) return;
+    if (!map || !L || !mapReady || $trackPoints.length === 0) return;
 
     trailLayer.clearLayers();
     highlightLayer.clearLayers();
 
-    const coords = $trackPoints.map(p => [p.lat, p.lon]);
-    const polyline = L.polyline(coords, {
-      color: '#3388ff',
-      weight: 3,
-      opacity: 0.8
-    });
+    let boundsToUse;
 
-    trailLayer.addLayer(polyline);
-    map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+    if ($originNearestTrackPoint && $destinationNearestTrackPoint) {
+      const startIdx = Math.min($originNearestTrackPoint.index, $destinationNearestTrackPoint.index);
+      const endIdx = Math.max($originNearestTrackPoint.index, $destinationNearestTrackPoint.index);
+      const segmentCoords = $trackPoints.slice(startIdx, endIdx + 1).map(p => [p.lat, p.lon]);
+
+      const segmentLine = L.polyline(segmentCoords, {
+        color: '#f59e0b',
+        weight: 6,
+        opacity: 1,
+        stroke: true,
+        fill: false
+      });
+
+      highlightLayer.addLayer(segmentLine);
+      boundsToUse = segmentLine.getBounds();
+    } else {
+      const coords = $trackPoints.map(p => [p.lat, p.lon]);
+      const fullLine = L.polyline(coords, {
+        color: '#3388ff',
+        weight: 4,
+        opacity: 1,
+        stroke: true,
+        fill: false
+      });
+      trailLayer.addLayer(fullLine);
+      boundsToUse = fullLine.getBounds();
+    }
+
+    map.fitBounds(boundsToUse, { padding: [50, 50], maxZoom: 13 });
   }
 
   function updateMarkers() {
-    if (!map || !L) return;
+    if (!map || !L || !mapReady) return;
 
     markersLayer.clearLayers();
     connectionLines.clearLayers();
-    highlightLayer.clearLayers();
 
     const redIcon = L.divIcon({
-      html: '<div style="width:20px;height:20px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
-      className: '',
+      html: '<div style="background:#ef4444;width:20px;height:20px;border:3px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
+      className: 'marker-red',
       iconSize: [20, 20],
       iconAnchor: [10, 10]
     });
 
     const greenIcon = L.divIcon({
-      html: '<div style="width:20px;height:20px;background:#22c55e;border:3px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
-      className: '',
+      html: '<div style="background:#22c55e;width:20px;height:20px;border:3px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
+      className: 'marker-green',
       iconSize: [20, 20],
       iconAnchor: [10, 10]
     });
 
     const blueIcon = L.divIcon({
-      html: '<div style="width:14px;height:14px;background:#3b82f6;border:2px solid white;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>',
-      className: '',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
+      html: '<div style="background:#3b82f6;width:12px;height:12px;border:2px solid white;border-radius:50%;"></div>',
+      className: 'marker-blue',
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
     });
 
     if ($originPoint && $originNearestTrackPoint) {
-      markersLayer.addLayer(
-        L.marker([$originPoint.lat, $originPoint.lon], { icon: redIcon, zIndexOffset: 1000 })
-          .bindPopup(`<b style="color:#ef4444">Origin</b><br>${$originPoint.name || 'Custom'}`)
-      );
+      const originMarker = L.marker([$originPoint.lat, $originPoint.lon], { icon: redIcon });
+      originMarker.bindPopup(`<b style="color:#ef4444">Origin</b><br>${$originPoint.name || 'Custom'}`);
+      markersLayer.addLayer(originMarker);
 
       connectionLines.addLayer(
         L.polyline(
           [[$originPoint.lat, $originPoint.lon], [$originNearestTrackPoint.lat, $originNearestTrackPoint.lon]],
-          { color: '#ef4444', weight: 2, dashArray: '5,5', opacity: 0.8 }
+          { color: '#ef4444', weight: 3, dashArray: '8,8', opacity: 0.9 }
         )
       );
 
@@ -134,7 +164,7 @@
       connectionLines.addLayer(
         L.polyline(
           [[$destinationPoint.lat, $destinationPoint.lon], [$destinationNearestTrackPoint.lat, $destinationNearestTrackPoint.lon]],
-          { color: '#22c55e', weight: 2, dashArray: '5,5', opacity: 0.8 }
+          { color: '#22c55e', weight: 3, dashArray: '8,8', opacity: 0.9 }
         )
       );
 
@@ -150,33 +180,57 @@
       const segmentCoords = $trackPoints.slice(startIdx, endIdx + 1).map(p => [p.lat, p.lon]);
 
       highlightLayer.addLayer(
-        L.polyline(segmentCoords, { color: '#f59e0b', weight: 6, opacity: 1 })
+        L.polyline(segmentCoords, { color: '#f59e0b', weight: 8, opacity: 1, stroke: true, fill: false })
       );
+
+      const segmentBounds = L.latLngBounds(segmentCoords);
+      map.fitBounds(segmentBounds, { padding: [60, 60], maxZoom: 13 });
     }
   }
 
   $effect(() => {
-    if (map && $trackPoints.length > 0) {
+    if (map && mapReady && $trackPoints.length > 0) {
       plotTrail();
     }
   });
 
   $effect(() => {
-    if (map && ($originPoint || $destinationPoint)) {
+    if (map && mapReady && ($originPoint || $destinationPoint)) {
       updateMarkers();
+      plotTrail();
+    }
+  });
+
+  $effect(() => {
+    if (map && mapReady && $selectedTab === 3) {
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+        if ($trackPoints.length > 0) plotTrail();
+        if ($originPoint || $destinationPoint) updateMarkers();
+      }, 300);
     }
   });
 </script>
 
-<div bind:this={mapContainer} class="w-full h-full min-h-[500px]"></div>
+<div bind:this={mapContainer} style="width: 100%; height: 100%; min-height: 500px; display: block; position: relative;"></div>
 
 <style>
   :global(.leaflet-container) {
     width: 100%;
     height: 100%;
     font-family: inherit;
+    background: #a0c4e8;
   }
   :global(.leaflet-popup-content-wrapper) {
     border-radius: 8px;
+  }
+  :global(path.leaflet-interactive) {
+    stroke: #3388ff !important;
+    stroke-width: 4px !important;
+    fill: none !important;
+  }
+  :global(.marker-red, .marker-green, .marker-blue) {
+    background: transparent !important;
+    border: none !important;
   }
 </style>
