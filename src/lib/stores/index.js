@@ -7,9 +7,14 @@ const RECENT_PLACES_KEY = 'le_douanier_recent_places';
 const SELECTED_GPX_KEY = 'le_douanier_selected_gpx';
 
 function isLocalStorageAvailable() {
+  if (typeof window === 'undefined') return false;
   try {
-    return typeof localStorage !== 'undefined' && localStorage !== null && typeof localStorage.getItem === 'function';
-  } catch {
+    if (!window.localStorage) return false;
+    const test = '__storage_test__';
+    window.localStorage.setItem(test, test);
+    window.localStorage.removeItem(test);
+    return true;
+  } catch (e) {
     return false;
   }
 }
@@ -43,7 +48,9 @@ function saveRecentPlaces(places) {
 
 function loadSelectedGpx() {
   if (!isLocalStorageAvailable()) return null;
-  return localStorage.getItem(SELECTED_GPX_KEY);
+  try {
+    return localStorage.getItem(SELECTED_GPX_KEY);
+  } catch { return null; }
 }
 
 function saveSelectedGpx(name) {
