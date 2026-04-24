@@ -11,9 +11,11 @@
   let originLon = $state('');
   let originShowRecent = $state(false);
   let originSelectedIndex = $state(-1);
+  let originBlockSearch = $state(false);
 
   let destShowRecent = $state(false);
   let destSelectedIndex = $state(-1);
+  let destBlockSearch = $state(false);
 
   let destQuery = $state('');
   let destResults = $state([]);
@@ -47,6 +49,9 @@
           selectOriginRecent($recentPlacesForCurrentGpx[idx]);
         }
       }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      document.querySelector('#dest-input')?.focus();
     } else if (e.key === 'Escape') {
       originResults = [];
       originSelectedIndex = -1;
@@ -71,6 +76,11 @@
         if (idx >= 0 && idx < $recentPlacesForCurrentGpx.length) {
           selectDestRecent($recentPlacesForCurrentGpx[idx]);
         }
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      if ($originPoint && $destinationPoint) {
+        document.querySelector('button[onclick*="selectedTab.set(2)"]')?.focus();
       }
     } else if (e.key === 'Escape') {
       destResults = [];
@@ -158,6 +168,7 @@
   }
 
   function selectOriginPlace(place) {
+    originBlockSearch = true;
     const pt = {
       lat: parseFloat(place.lat),
       lon: parseFloat(place.lon),
@@ -170,6 +181,7 @@
     originPOIResults = [];
     originShowRecent = false;
     originSelectedIndex = -1;
+    setTimeout(() => { originBlockSearch = false; }, 100);
   }
 
   function selectDestPlace(place) {
@@ -355,6 +367,7 @@
 
       <div class="relative">
         <input
+          id="origin-input"
           type="text"
           bind:value={originQuery}
           oninput={handleOriginInput}
@@ -439,6 +452,7 @@
 
       <div class="relative">
         <input
+          id="dest-input"
           type="text"
           bind:value={destQuery}
           oninput={handleDestInput}
