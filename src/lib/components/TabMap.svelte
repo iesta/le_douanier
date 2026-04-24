@@ -9,6 +9,8 @@
     trackPoints,
     selectedTab
   } from '$lib/stores/index.js';
+  import { calculateTrailDistance, calculateElevationStats, estimateHikingTime } from '$lib/utils/geo.js';
+  import { derived } from 'svelte/store';
 
   let mapContainer = $state(null);
   let map = null;
@@ -18,6 +20,26 @@
   let markersLayer = null;
   let connectionLines = null;
   let mapReady = $state(false);
+
+  const mapStats = derived(
+    [originNearestTrackPoint, destinationNearestTrackPoint, trackPoints],
+    ([$origin, $destination, $trackPoints]) => {
+      if (!$origin || !$destination || $trackPoints.length === 0) return null;
+
+      const startIdx = Math.min($origin.index, $destination.index);
+      const endIdx = Math.max($origin.index, $destination.index);
+      const trailDistance = calculateTrailDistance($trackPoints, startIdx, endIdx);
+      const { gain, loss } = calculateElevationStats($trackPoints, startIdx, endIdx);
+      const hikingTime = estimateHikingTime(trailDistance, gain);
+
+      return {
+        distance: trailDistance,
+        gain,
+        loss,
+        hikingTime
+      };
+    }
+  );
 
   onMount(() => {
     if (!browser) return;
@@ -69,6 +91,10 @@
     setTimeout(() => {
       if (map) map.invalidateSize();
     }, 100);
+  }
+
+  function formatNumber(num) {
+    return num.toLocaleString('de-DE', { maximumFractionDigits: 0 });
   }
 
   function plotTrail() {
@@ -212,7 +238,29 @@
   });
 </script>
 
-<div bind:this={mapContainer} style="width: 100%; height: 100%; min-height: 500px; display: block; position: relative;"></div>
+<div bind:this={mapContainer} style="width: 100%; height: 100%; min-height: 500px; display: block; position: relative;">
+  {#if $mapStats}
+    <div class="map-stats-overlay">
+      <div class="stat-item">
+        <span class="stat-value">{formatNumber($mapStats.distance / 1000)}</span>
+        <span class="stat-unit">km</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-value">{Math.floor($mapStats.hikingTime)}h {$mapStats.hikingTime % 1 > 0 ? Math.round(($mapStats.hikingTime % 1) * 60) : '00'}m</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-value stat-gain">+{formatNumber($mapStats.gain)}</span>
+        <span class="stat-unit">m</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value stat-loss">-{formatNumber($mapStats.loss)}</span>
+        <span class="stat-unit">m</span>
+      </div>
+    </div>
+  {/if}
+</div>
 
 <style>
   :global(.leaflet-container) {
@@ -232,5 +280,50 @@
   :global(.marker-red, .marker-green, .marker-blue) {
     background: transparent !important;
     border: none !important;
+  }
+
+  .map-stats-overlay {
+    position: absolute;
+    bottom: 30px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    font-size: 11px;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+
+  .stat-value {
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .stat-unit {
+    color: #6b7280;
+    font-size: 10px;
+  }
+
+  .stat-gain {
+    color: #22c55e;
+  }
+
+  .stat-loss {
+    color: #ef4444;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 16px;
+    background: #e5e7eb;
   }
 </style>
