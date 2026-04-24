@@ -168,6 +168,7 @@
     originResults = [];
     originPOIResults = [];
     originShowRecent = false;
+    originSelectedIndex = -1;
   }
 
   function selectDestPlace(place) {
@@ -182,6 +183,7 @@
     destResults = [];
     destPOIResults = [];
     destShowRecent = false;
+    destSelectedIndex = -1;
   }
 
   function selectOriginRecent(place) {
@@ -191,6 +193,7 @@
     originResults = [];
     originPOIResults = [];
     originShowRecent = false;
+    originSelectedIndex = -1;
   }
 
   function selectDestRecent(place) {
@@ -200,6 +203,7 @@
     destResults = [];
     destPOIResults = [];
     destShowRecent = false;
+    destSelectedIndex = -1;
   }
 
   function onOriginPOIChange(e) {
