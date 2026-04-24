@@ -10,6 +10,7 @@
   let originLat = $state('');
   let originLon = $state('');
   let originShowRecent = $state(false);
+  let originSelectedIndex = $state(-1);
 
   let destQuery = $state('');
   let destResults = $state([]);
@@ -19,13 +20,65 @@
   let destLat = $state('');
   let destLon = $state('');
   let destShowRecent = $state(false);
+  let destSelectedIndex = $state(-1);
 
   let showHistory = $state(false);
 
   let originDebounce;
   let destDebounce;
 
+  function handleOriginKeydown(e) {
+    if (originResults.length === 0 && $recentPlacesForCurrentGpx.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const max = originResults.length > 0 ? originResults.length - 1 : $recentPlacesForCurrentGpx.length - 1;
+      originSelectedIndex = Math.min(originSelectedIndex + 1, max);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      originSelectedIndex = Math.max(originSelectedIndex - 1, 0);
+    } else if (e.key === 'Enter' && originSelectedIndex >= 0) {
+      e.preventDefault();
+      if (originResults.length > 0 && originSelectedIndex < originResults.length) {
+        selectOriginPlace(originResults[originSelectedIndex]);
+      } else {
+        const idx = originSelectedIndex - originResults.length;
+        if (idx >= 0 && idx < $recentPlacesForCurrentGpx.length) {
+          selectOriginRecent($recentPlacesForCurrentGpx[idx]);
+        }
+      }
+    } else if (e.key === 'Escape') {
+      originResults = [];
+      originSelectedIndex = -1;
+    }
+  }
+
+  function handleDestKeydown(e) {
+    if (destResults.length === 0 && $recentPlacesForCurrentGpx.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const max = destResults.length > 0 ? destResults.length - 1 : $recentPlacesForCurrentGpx.length - 1;
+      destSelectedIndex = Math.min(destSelectedIndex + 1, max);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      destSelectedIndex = Math.max(destSelectedIndex - 1, 0);
+    } else if (e.key === 'Enter' && destSelectedIndex >= 0) {
+      e.preventDefault();
+      if (destResults.length > 0 && destSelectedIndex < destResults.length) {
+        selectDestPlace(destResults[destSelectedIndex]);
+      } else {
+        const idx = destSelectedIndex - destResults.length;
+        if (idx >= 0 && idx < $recentPlacesForCurrentGpx.length) {
+          selectDestRecent($recentPlacesForCurrentGpx[idx]);
+        }
+      }
+    } else if (e.key === 'Escape') {
+      destResults = [];
+      destSelectedIndex = -1;
+    }
+  }
+
   async function handleOriginInput() {
+    originSelectedIndex = -1;
     clearTimeout(originDebounce);
     originDebounce = setTimeout(async () => {
       if (originQuery.length >= 2) {
@@ -53,6 +106,7 @@
   }
 
   async function handleDestInput() {
+    destSelectedIndex = -1;
     destShowRecent = false;
     clearTimeout(destDebounce);
     destDebounce = setTimeout(async () => {
@@ -299,6 +353,7 @@
           type="text"
           bind:value={originQuery}
           oninput={handleOriginInput}
+          onkeydown={handleOriginKeydown}
           onfocus={() => originQuery.length === 0 && toggleOriginRecent()}
           placeholder="Search origin..."
           class="w-full px-3 py-2 pr-10 border rounded-lg bg-white text-sm"
@@ -324,9 +379,13 @@
 
       {#if originResults.length > 0}
         <ul class="mt-2 bg-white border rounded-lg shadow max-h-40 overflow-y-auto">
-          {#each originResults as place}
+          {#each originResults as place, i}
             <li>
-              <button type="button" onclick={() => selectOriginPlace(place)} class="w-full text-left px-3 py-2 hover:bg-gray-100 text-xs border-b last:border-0">
+              <button
+                type="button"
+                onclick={() => selectOriginPlace(place)}
+                class="w-full text-left px-3 py-2 text-xs border-b last:border-0 {i === originSelectedIndex ? 'bg-blue-100' : 'hover:bg-gray-100'}"
+              >
                 {place.display_name.split(',').slice(0, 3).join(',')}
               </button>
             </li>
@@ -378,6 +437,7 @@
           type="text"
           bind:value={destQuery}
           oninput={handleDestInput}
+          onkeydown={handleDestKeydown}
           onfocus={() => destQuery.length === 0 && toggleDestRecent()}
           placeholder="Search destination..."
           class="w-full px-3 py-2 pr-10 border rounded-lg bg-white text-sm"
@@ -403,9 +463,13 @@
 
       {#if destResults.length > 0}
         <ul class="mt-2 bg-white border rounded-lg shadow max-h-40 overflow-y-auto">
-          {#each destResults as place}
+          {#each destResults as place, i}
             <li>
-              <button type="button" onclick={() => selectDestPlace(place)} class="w-full text-left px-3 py-2 hover:bg-gray-100 text-xs border-b last:border-0">
+              <button
+                type="button"
+                onclick={() => selectDestPlace(place)}
+                class="w-full text-left px-3 py-2 text-xs border-b last:border-0 {i === destSelectedIndex ? 'bg-blue-100' : 'hover:bg-gray-100'}"
+              >
                 {place.display_name.split(',').slice(0, 3).join(',')}
               </button>
             </li>
