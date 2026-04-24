@@ -7,7 +7,8 @@
     originNearestTrackPoint,
     destinationNearestTrackPoint,
     trackPoints,
-    selectedTab
+    selectedTab,
+    tileProvider
   } from '$lib/stores/index.js';
   import { calculateTrailDistance, calculateElevationStats, estimateHikingTime } from '$lib/utils/geo.js';
   import { derived } from 'svelte/store';
@@ -19,6 +20,9 @@
   let highlightLayer = null;
   let markersLayer = null;
   let connectionLines = null;
+  let baseLayers = {};
+  let currentBaseLayer = null;
+  let layerControl = null;
   let mapReady = $state(false);
 
   const mapStats = derived(
@@ -72,15 +76,78 @@
       preferCanvas: false
     });
 
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Define tile layers
+    const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
-      maxZoom: 18
-    }).addTo(map);
+      maxZoom: 19
+    });
+
+    const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors, © OpenTopoMap',
+      maxZoom: 17,
+      subdomains: ['a', 'b', 'c']
+    });
+
+    const cycleLayer = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors, © CyclOSM',
+      maxZoom: 20
+    });
+
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '© Esri',
+      maxZoom: 19
+    });
+
+    const stadiaLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
+      attribution: '© Stadia Maps, © OpenStreetMap contributors',
+      maxZoom: 20
+    });
+
+    // Store layers in object
+    baseLayers = {
+      "OpenStreetMap": osmLayer,
+      "OpenTopoMap": topoLayer,
+      "CyclOSM": cycleLayer,
+      "Satellite": satelliteLayer,
+      "Stadia Maps": stadiaLayer
+    };
+
+    // Add initial base layer based on stored preference
+    const initialProvider = $tileProvider || 'OpenStreetMap';
+    currentBaseLayer = baseLayers[initialProvider] || osmLayer;
+    currentBaseLayer.addTo(map);
 
     trailLayer = L.layerGroup().addTo(map);
     highlightLayer = L.layerGroup().addTo(map);
     markersLayer = L.layerGroup().addTo(map);
     connectionLines = L.layerGroup().addTo(map);
+
+    // Add scale control
+    L.control.scale({
+      imperial: false,
+      metric: true,
+      maxWidth: 150,
+      updateWhenIdle: true
+    }).addTo(map);
+
+    // Create layer control
+    layerControl = L.control.layers(baseLayers, null, {
+      collapsed: true,
+      position: 'topright'
+    }).addTo(map);
+
+    // Listen for layer change events
+    setTimeout(() => {
+      const controlContainer = layerControl.getContainer();
+      if (controlContainer) {
+        controlContainer.addEventListener('click', function(e) {
+          if (e.target.type === 'radio' && e.target.name === 'leaflet-base-layers') {
+            const providerName = e.target.nextSibling.textContent.trim();
+            tileProvider.set(providerName);
+          }
+        });
+      }
+    }, 100);
 
     mapReady = true;
 
@@ -236,6 +303,29 @@
       }, 300);
     }
   });
+
+  $effect(() => {
+    if (map && mapReady && currentBaseLayer && $tileProvider) {
+      const newLayer = baseLayers[$tileProvider];
+      if (newLayer && newLayer !== currentBaseLayer) {
+        map.removeLayer(currentBaseLayer);
+        newLayer.addTo(map);
+        currentBaseLayer = newLayer;
+        
+        // Update layer control selection
+        setTimeout(() => {
+          if (layerControl && layerControl.getContainer()) {
+            const radios = layerControl.getContainer().querySelectorAll('input[type="radio"]');
+            radios.forEach(radio => {
+              if (radio.nextSibling && radio.nextSibling.textContent.trim() === $tileProvider) {
+                radio.checked = true;
+              }
+            });
+          }
+        }, 50);
+      }
+    }
+  });
 </script>
 
 <div bind:this={mapContainer} style="width: 100%; height: 100%; min-height: 500px; display: block; position: relative;">
@@ -268,6 +358,38 @@
     height: 100%;
     font-family: inherit;
     background: #a0c4e8;
+  }
+
+  :global(.leaflet-control-scale) {
+    margin-bottom: 10px !important;
+    margin-left: 10px !important;
+    border: 2px solid rgba(0, 0, 0, 0.2) !important;
+    border-radius: 4px !important;
+    background-color: white !important;
+    padding: 2px 5px !important;
+    font-size: 11px !important;
+  }
+
+  :global(.leaflet-control-layers) {
+    border-radius: 4px !important;
+    background: white !important;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  :global(.leaflet-control-layers-expanded) {
+    padding: 10px !important;
+    min-width: 180px !important;
+  }
+
+  :global(.leaflet-control-layers label) {
+    display: block !important;
+    margin: 5px 0 !important;
+    cursor: pointer !important;
+    font-size: 13px !important;
+  }
+
+  :global(.leaflet-control-layers input[type="radio"]) {
+    margin-right: 8px !important;
   }
   :global(.leaflet-popup-content-wrapper) {
     border-radius: 8px;

@@ -5,6 +5,7 @@ import { calculateBounds } from '$lib/utils/geocode.js';
 const HISTORY_KEY = 'le_douanier_history';
 const RECENT_PLACES_KEY = 'le_douanier_recent_places';
 const SELECTED_GPX_KEY = 'le_douanier_selected_gpx';
+const TILE_PROVIDER_KEY = 'le_douanier_tile_provider';
 
 function isLocalStorageAvailable() {
   if (typeof window === 'undefined') return false;
@@ -58,9 +59,22 @@ function saveSelectedGpx(name) {
   localStorage.setItem(SELECTED_GPX_KEY, name);
 }
 
+function loadTileProvider() {
+  if (!isLocalStorageAvailable()) return 'OpenStreetMap';
+  try {
+    return localStorage.getItem(TILE_PROVIDER_KEY) || 'OpenStreetMap';
+  } catch { return 'OpenStreetMap'; }
+}
+
+function saveTileProvider(provider) {
+  if (!isLocalStorageAvailable()) return;
+  localStorage.setItem(TILE_PROVIDER_KEY, provider);
+}
+
 export const availableGPX = writable([
   { name: 'GR34 Sentier des Douaniers (Brittany)', file: 'gr34-sentier-des-douaniers-2020.gpx', distance: '~2090km' },
-  { name: 'GR20 Corsica (North-South)', file: 'gr20-2018-complete-northsouth.gpx', distance: '~180km' }
+  { name: 'GR20 Corsica (North-South)', file: 'gr20-2018-complete-northsouth.gpx', distance: '~180km' },
+  { name: 'Mare e Monti (Corsica)', file: 'mare-e-monti.gpx', distance: '~200km' }
 ]);
 
 export const selectedGpx = writable(loadSelectedGpx() || 'gr34-sentier-des-douaniers-2020.gpx');
@@ -156,6 +170,12 @@ export const destinationNearestTrackPoint = derived(
 );
 
 export const selectedTab = writable(1);
+
+export const tileProvider = writable(loadTileProvider());
+
+tileProvider.subscribe(provider => {
+  saveTileProvider(provider);
+});
 
 export const preferences = writable({ unit: 'km', darkMode: true, showCoordinates: false });
 
