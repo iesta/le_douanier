@@ -182,3 +182,38 @@ export const preferences = writable({ unit: 'km', darkMode: true, showCoordinate
 export function updatePreferences(updates) {
   preferences.update(p => ({ ...p, ...updates }));
 }
+
+export function exportAppState() {
+  return {
+    version: 'v0020',
+    exportedAt: new Date().toISOString(),
+    history: get(history),
+    recentPlaces: get(recentPlaces),
+    selectedGpx: get(selectedGpx),
+    tileProvider: get(tileProvider),
+    preferences: get(preferences)
+  };
+}
+
+export function importAppState(state) {
+  if (state.history) {
+    history.set(state.history);
+    saveHistory(state.history);
+  }
+  if (state.recentPlaces) {
+    recentPlaces.set(state.recentPlaces);
+    saveRecentPlaces(state.recentPlaces);
+  }
+  if (state.selectedGpx) {
+    selectedGpx.set(state.selectedGpx);
+    saveSelectedGpx(state.selectedGpx);
+  }
+  if (state.tileProvider) {
+    tileProvider.set(state.tileProvider);
+    saveTileProvider(state.tileProvider);
+  }
+  if (state.preferences) {
+    preferences.set(state.preferences);
+    updatePreferences(state.preferences);
+  }
+}
