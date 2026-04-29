@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { selectedTab, trackPoints, trackName, selectedGpx, preferences } from '$lib/stores/index.js';
+  import { selectedTab, trackPoints, trackName, selectedGpx, availableGPX, preferences } from '$lib/stores/index.js';
   import { parseGPX } from '$lib/utils/geo.js';
   import TabBar from '$lib/components/TabBar.svelte';
   import TabGpx from '$lib/components/TabGpx.svelte';
@@ -17,6 +17,10 @@
   onMount(async () => {
     try {
       const gpxFile = $selectedGpx || 'gr34-sentier-des-douaniers-2020.gpx';
+      const gpxInfo = $availableGPX.find(g => g.file === gpxFile);
+      if (gpxInfo) {
+        trackName.set(gpxInfo.name);
+      }
       const res = await fetch(`/gpx/${gpxFile}`);
       if (!res.ok) throw new Error('Failed to load GPX file');
       const text = await res.text();
