@@ -49,7 +49,9 @@
       {:else if error}
         {error}
       {:else}
-        {$trackName || 'GR34'} · {$trackPoints.length} points
+        <button onclick={() => selectedTab.set(0)} class="hover:underline cursor-pointer">
+          {$trackName || 'GR34'} · {$trackPoints.length} points
+        </button>
       {/if}
     </p>
   </header>
